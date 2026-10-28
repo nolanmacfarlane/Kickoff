@@ -1,0 +1,11 @@
+{
+  "name": "sport-meetup-prototype",
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/ts/main.ts --bundle --outfile=public/app.js --target=es2020",
+    "watch": "npm run build -- --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "esbuild tests/rules.test.ts --bundle --platform=node --outfile=tests/.rules.test.cjs && node tests/.rules.test.cjs"
+  },
+  "devDependencies": { "esbuild": "^0.24.0", "typescript": "^5.6.0" }
+}
