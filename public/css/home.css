@@ -1,0 +1,85 @@
+/* Home: greeting, recommended invites, mini map, recent activity.
+   Class vocabulary: .greeting .rec-list .rec-card .mini-map .activity-list */
+.greeting h1 {
+   font-size: var(--text-3xl);
+}
+
+.greeting p {
+   margin-top: var(--s-2);
+   color: var(--ink-2);
+   font-size: var(--text-lg);
+}
+
+.greeting {
+   margin-bottom: var(--s-6);
+}
+
+.rec-list {
+   display: grid;
+   gap: var(--s-3);
+}
+
+.rec-card {
+   display: grid;
+   gap: var(--s-3);
+}
+
+.rec-card__top {
+   display: flex;
+   align-items: flex-start;
+   justify-content: space-between;
+   gap: var(--s-3);
+}
+
+.rec-card__when {
+   font-weight: 600;
+}
+
+.rec-card__foot {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: var(--s-3);
+}
+
+.rec-card__spots {
+   font-size: var(--text-sm);
+   color: var(--ink-2);
+}
+
+.mini-map {
+   position: relative;
+   height: 280px;
+}
+
+.mini-map .map {
+   height: 100%;
+}
+
+.mini-map .pin {
+   width: 26px;
+   height: 26px;
+   border-width: 2px;
+}
+
+.activity-list {
+   display: grid;
+}
+
+.activity-list li {
+   display: flex;
+   justify-content: space-between;
+   gap: var(--s-3);
+   padding: var(--s-3) 0;
+   border-bottom: 1px solid var(--line);
+   font-size: var(--text-sm);
+}
+
+.activity-list li:last-child {
+   border-bottom: 0;
+}
+
+.activity-list time {
+   color: var(--ink-3);
+   white-space: nowrap;
+}

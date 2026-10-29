@@ -1,0 +1,196 @@
+/* Stylized map + pins + filters.
+   Class vocabulary: .map-layout .map .map__svg .map__water .map__land .map__park .map__road .pin .pin--selected .pin--friends .pin--you .map-filters .map-card */
+.map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--s-4);
+  height: calc(100vh - var(--topbar-h) - 180px);
+  min-height: 480px;
+}
+
+.map-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.map-filters .select {
+  width: auto;
+  min-width: 150px;
+}
+
+.map {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-xl);
+  background: var(--water);
+}
+
+.map__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.map__water {
+  fill: var(--water);
+}
+
+.map__land {
+  fill: var(--land);
+  stroke: var(--road-edge);
+  stroke-width: .3;
+}
+
+.map__park {
+  fill: var(--park);
+}
+
+.map__road {
+  fill: none;
+  stroke: var(--road);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+
+.map__label {
+  font-family: var(--font-body);
+  font-size: 2.2px;
+  fill: var(--ink-3);
+  letter-spacing: .08em;
+}
+
+/* Pins are buttons placed with inline left/top percentages: style="left:48%;top:52%" */
+.pin {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: var(--ink);
+  color: #fff;
+  border: 3px solid var(--surface);
+  border-radius: 50% 50% 50% 0;
+  rotate: -45deg;
+  transform-origin: 50% 100%;
+  box-shadow: 0 3px 8px rgba(20, 35, 31, .35);
+  font-weight: 700;
+  font-size: var(--text-xs);
+}
+
+.pin>* {
+  rotate: 45deg;
+}
+
+.pin:hover {
+  background: var(--primary);
+}
+
+.pin--friends {
+  background: var(--primary);
+}
+
+.pin--match {
+  background: var(--mark);
+  color: var(--ink);
+}
+
+/* matches your profile */
+.pin--selected {
+  background: var(--ink);
+  width: 42px;
+  height: 42px;
+  z-index: 5;
+  box-shadow: 0 0 0 4px var(--mark), 0 4px 10px rgba(20, 35, 31, .4);
+}
+
+.pin--venue {
+  width: 22px;
+  height: 22px;
+  background: var(--surface);
+  color: var(--ink-2);
+  border-color: var(--line-strong);
+  box-shadow: none;
+}
+
+.pin--draft {
+  background: var(--bad);
+}
+
+/* freeform pin being dropped in Create */
+
+.map--pick {
+  cursor: crosshair;
+}
+
+.map__hint {
+  position: absolute;
+  left: var(--s-3);
+  bottom: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  border-radius: var(--r-md);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-pop);
+}
+
+.map__legend {
+  position: absolute;
+  right: var(--s-3);
+  bottom: var(--s-3);
+  display: grid;
+  gap: 4px;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  border-radius: var(--r-md);
+  font-size: var(--text-xs);
+}
+
+.map__legend span::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.map__legend .is-friends::before {
+  background: var(--primary);
+}
+
+.map__legend .is-match::before {
+  background: var(--mark);
+}
+
+/* Side list next to the map */
+.map-side {
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: var(--s-3);
+  padding-right: var(--s-1);
+}
+
+.map-card {
+  display: grid;
+  gap: var(--s-2);
+}
+
+@media (max-width: 980px) {
+  .map-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .map {
+    height: 420px;
+  }
+}

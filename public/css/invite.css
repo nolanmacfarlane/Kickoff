@@ -1,0 +1,154 @@
+/* Create invite form + invite detail modal.
+   Class vocabulary: .create-form .venue-list .venue-option .detail .detail__head .attendee .venue-card .gear-box .locked-note */
+.create-form {
+   display: grid;
+   gap: var(--s-5);
+}
+
+.create-form .card {
+   display: grid;
+   gap: var(--s-4);
+}
+
+.create-form__actions {
+   display: flex;
+   gap: var(--s-3);
+   align-items: center;
+}
+
+.gear-fields {
+   display: grid;
+   gap: var(--s-3);
+   padding-left: calc(22px + var(--s-3));
+}
+
+.venue-list {
+   display: grid;
+   gap: var(--s-2);
+   max-height: 240px;
+   overflow: auto;
+}
+
+.venue-option {
+   display: grid;
+   gap: 2px;
+   width: 100%;
+   padding: var(--s-3);
+   text-align: left;
+   background: var(--surface);
+   border: 1.5px solid var(--line);
+   border-radius: var(--r-md);
+}
+
+.venue-option:hover {
+   border-color: var(--ink);
+}
+
+.venue-option[aria-pressed="true"] {
+   border-color: var(--primary);
+   background: var(--primary-soft);
+}
+
+.venue-option small {
+   color: var(--ink-3);
+}
+
+/* Detail modal */
+.detail {
+   display: grid;
+   gap: var(--s-5);
+}
+
+.detail__head {
+   display: flex;
+   align-items: flex-start;
+   gap: var(--s-3);
+}
+
+.detail__head h2 {
+   font-size: var(--text-2xl);
+}
+
+.detail__when {
+   font-size: var(--text-lg);
+   font-weight: 600;
+   margin-top: var(--s-1);
+}
+
+.detail section {
+   display: grid;
+   gap: var(--s-3);
+}
+
+.detail h3 {
+   font-size: var(--text-md);
+}
+
+.gear-box {
+   padding: var(--s-3) var(--s-4);
+   border-radius: var(--r-md);
+   background: var(--good-soft);
+   color: var(--good);
+   font-weight: 500;
+}
+
+.venue-card {
+   padding: var(--s-4);
+   border: 1px solid var(--line);
+   border-radius: var(--r-lg);
+   background: var(--paper);
+   display: grid;
+   gap: var(--s-2);
+}
+
+.venue-card dl {
+   display: grid;
+   grid-template-columns: auto 1fr;
+   gap: var(--s-1) var(--s-4);
+   margin: 0;
+   font-size: var(--text-sm);
+}
+
+.venue-card dt {
+   color: var(--ink-3);
+}
+
+.venue-card dd {
+   margin: 0;
+}
+
+.attendee-list {
+   display: grid;
+   gap: var(--s-2);
+}
+
+.attendee {
+   display: flex;
+   align-items: center;
+   gap: var(--s-3);
+   padding: var(--s-2) 0;
+}
+
+.attendee__name {
+   font-weight: 600;
+}
+
+.attendee__role {
+   color: var(--ink-3);
+   font-size: var(--text-xs);
+}
+
+.locked-note {
+   font-size: var(--text-sm);
+   color: var(--ink-3);
+}
+
+.detail__actions {
+   display: flex;
+   gap: var(--s-3);
+   flex-wrap: wrap;
+   position: sticky;
+   bottom: calc(-1 * var(--s-5));
+   padding: var(--s-4) 0 0;
+   background: linear-gradient(transparent, var(--surface) 30%);
+}
