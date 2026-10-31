@@ -1,5 +1,7 @@
-// App entry: router, top tabs, notification badge, user chip. Views never touch location directly except via go().
-import { avatar, firstName, h, keepFocus, refreshModal } from './dom';
+// App entry: router, top tabs, notification badge, theme, and the unsaved-changes guard.
+import { destroyMaps } from './components/mapWidget';
+import { confirmDialog, go, h, keepFocus, refreshModal } from './dom';
+import { getGuard, setGuard } from './nav';
 import { currentUser, subscribe, unreadCount } from './state';
 import * as create from './views/create';
 import * as home from './views/home';
@@ -7,35 +9,32 @@ import * as map from './views/map';
 import * as onboarding from './views/onboarding';
 import * as profile from './views/profile';
 import * as social from './views/social';
-import * as sport from './views/sport';
 
-interface Route { render: (args: string[]) => HTMLElement; live: boolean; tab: string | null; title: string }
-// live = re-render when app state changes. Forms (create, onboarding) are not live so typing is never lost.
+interface Route { render: (args: string[]) => HTMLElement; live: boolean; tab: string; title: string }
+// live = re-render when app state changes. The create form and onboarding are not live, so typing is never lost.
 const routes: Record<string, Route> = {
   home: { render: () => home.render(), live: true, tab: 'home', title: 'Home' },
   map: { render: map.render, live: true, tab: 'map', title: 'Map' },
   create: { render: () => create.render(), live: false, tab: 'create', title: 'Create invite' },
   social: { render: () => social.render(), live: true, tab: 'social', title: 'Social' },
   profile: { render: profile.render, live: true, tab: 'profile', title: 'Profile' },
-  sport: { render: sport.render, live: false, tab: null, title: 'Sport' },
 };
 
 const app = document.getElementById('app')!;
 let mode: 'onboarding' | 'app' | null = null;
 let lastPath = '';
+let currentHash = location.hash;
+let suppress = false;
 
-function parse(): { name: string; args: string[] }
-{
+function parse(): { name: string; args: string[] } {
   const [name, ...args] = (location.hash.replace(/^#\/?/, '') || 'home').split('/');
   return { name: name in routes ? name : 'home', args };
 }
 
-function updateChrome(): void
-{
+function updateChrome(): void {
   const me = currentUser();
   document.body.dataset.auth = me ? 'in' : 'out';
-  const chip = document.getElementById('user-chip')!;
-  chip.replaceChildren(...(me ? [avatar(me, 'sm'), h('span', {}, firstName(me.name))] : []));
+  document.documentElement.dataset.theme = me?.settings.theme ?? 'light';
   const badge = document.getElementById('social-badge')!;
   const n = me ? unreadCount(me.id) : 0;
   badge.hidden = n === 0;
@@ -43,13 +42,12 @@ function updateChrome(): void
   badge.setAttribute('aria-label', `${n} unread updates`);
 }
 
-function render(fromState = false): void
-{
+function render(fromState = false): void {
   updateChrome();
   const me = currentUser();
-  if (!me)
-  {
-    if (mode !== 'onboarding') { mode = 'onboarding'; document.title = 'Welcome | Pickup'; app.replaceChildren(onboarding.render()); }
+  currentHash = location.hash;
+  if (!me) {
+    if (mode !== 'onboarding') { mode = 'onboarding'; setGuard(null); destroyMaps(); document.body.dataset.route = 'onboarding'; document.title = 'Welcome | Kickoff'; app.replaceChildren(onboarding.render()); }
     return;
   }
   mode = 'app';
@@ -57,10 +55,17 @@ function render(fromState = false): void
   const route = routes[name];
   const path = `${name}/${args.join('/')}`;
   const scrollY = window.scrollY;
-  app.replaceChildren(route.render(args));
-  document.title = `${route.title} | Pickup`;
-  document.querySelectorAll<HTMLElement>('.tab').forEach((t) =>
-  {
+  setGuard(null);          // a screen with a form registers its own guard while it renders
+  destroyMaps();
+  document.body.dataset.route = name;
+  let view: HTMLElement;
+  try { view = route.render(args); } catch (err) {
+    console.error(err);
+    view = h('div', { class: 'empty' }, h('h3', {}, 'Something went wrong loading this screen'), h('p', {}, 'Try another tab, or reload the page.'));
+  }
+  app.replaceChildren(view);
+  document.title = `${route.title} | Kickoff`;
+  document.querySelectorAll<HTMLElement>('.tab').forEach((t) => {
     if (t.dataset.tab === route.tab) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
   });
   if (fromState && path === lastPath) window.scrollTo(0, scrollY);
@@ -68,13 +73,32 @@ function render(fromState = false): void
   lastPath = path;
 }
 
-subscribe(() =>
-{
+subscribe(() => {
   const me = currentUser();
   if (!me || mode !== 'app') { render(true); return; }   // sign in / out switches mode
   updateChrome();
   if (routes[parse().name].live) keepFocus(() => render(true));
   refreshModal();
 });
-window.addEventListener('hashchange', () => render());
+
+window.addEventListener('hashchange', () => {
+  if (suppress) { suppress = false; return; }
+  const guard = getGuard();
+  const target = location.hash;
+  if (guard && guard.isDirty() && target !== currentHash) {
+    suppress = true; location.hash = currentHash;          // stay put while we ask
+    confirmDialog({
+      title: 'Unsaved changes', body: 'You have changes to your profile that are not saved.',
+      actions: [
+        { label: 'Keep editing' },
+        { label: 'Discard changes', variant: 'danger', onClick: () => { guard.discard(); setGuard(null); go(target); } },
+        { label: 'Save and leave', variant: 'primary', onClick: () => { if (guard.save()) go(target); } },
+      ],
+    });
+    return;
+  }
+  render();
+});
+// Closing the tab: browsers only allow their own generic warning.
+window.addEventListener('beforeunload', (e) => { if (getGuard()?.isDirty()) { e.preventDefault(); e.returnValue = ''; } });
 render();

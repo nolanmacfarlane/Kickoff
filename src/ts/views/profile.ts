@@ -1,68 +1,114 @@
-// Profile tab: menu on the left (as in the sketch), section on the right. Onboarding answers are editable here.
+// Profile tab: menu on the left (as in the sketch), section on the right. All onboarding answers are edited in "Your profile".
 import { inviteCard } from '../components/inviteCard';
-import { calendarField, currentSportsField, desiredSportsField, draftFromUser, draftToProfile, identityFields, motivationField } from '../components/profileFields';
-import { avatar, fmtAgo, go, h, keepFocus, toast } from '../dom';
-import { activityFor, currentUser, logout, myPast, myUpcoming, updateProfile } from '../state';
+import {
+  calendarField, draftFromUser, draftToProfile, identityFields, motivationField, sportsPlayField, sportsWantField, type ProfileDraft,
+} from '../components/profileFields';
+import { seg } from '../components/seg';
+import { avatar, confirmDialog, fmtAgo, go, h, keepFocus, toast } from '../dom';
+import { setGuard } from '../nav';
+import { activityFor, currentUser, logout, myPast, myUpcoming, updateProfile, updateSettings } from '../state';
 import { openInvite } from './inviteDetail';
 
 const SECTIONS: [string, string][] = [['profile', 'Your profile'], ['activity', 'Activity'], ['personalization', 'Personalization'], ['help', 'Help'], ['about', 'About us']];
 
-function editor(kind: 'profile' | 'personalization'): HTMLElement
-{
+// The unsaved draft lives here so a re-render does not throw away what the user typed.
+let editing: { userId: string; initial: string; draft: ProfileDraft } | null = null;
+
+function profileEditor(): HTMLElement {
   const me = currentUser()!;
-  const d = draftFromUser(me);
+  if (!editing || editing.userId !== me.id) { const d = draftFromUser(me); editing = { userId: me.id, initial: JSON.stringify(d), draft: d }; }
+  const ed = editing;
+  const d = ed.draft;
   let error = '';
   const root = h('div', {});
-  function save(): void
-  {
-    if (kind === 'profile' && (!d.name.trim() || !d.area)) { error = 'Add your name and neighbourhood.'; return draw(); }
-    if (kind === 'profile' && d.motivations.length === 0) { error = 'Pick at least one motivation.'; return draw(); }
-    const p = draftToProfile(d);
-    const res = updateProfile(kind === 'profile' ? { name: p.name, area: p.area, motivations: p.motivations } : { currentSports: p.currentSports, desiredSports: p.desiredSports, calendar: p.calendar });
-    toast(res.ok ? 'Changes saved. Your suggestions are updated.' : res.error);
+  const dirty = () => JSON.stringify(d) !== ed.initial;
+
+  function save(): boolean {
+    if (!d.name.trim()) { error = 'Add your name.'; draw(); return false; }
+    if (!d.address.trim()) { error = 'Add your address.'; draw(); return false; }
+    if (d.motivations.length === 0) { error = 'Pick at least one thing you are looking for.'; draw(); return false; }
+    editing = null; setGuard(null);              // clear first: updateProfile triggers a re-render
+    const res = updateProfile(draftToProfile(d));
+    if (!res.ok) { editing = ed; error = res.error; draw(); return false; }
+    toast('Profile saved. Your suggestions are updated.');
+    return true;
   }
-  function draw(): void
-  {
-    keepFocus(() => root.replaceChildren(h('div', { class: 'card stack' },
+  setGuard({ isDirty: dirty, save, discard: () => { editing = null; } });
+
+  function draw(): void {
+    keepFocus(() => root.replaceChildren(h('div', { class: 'stack' },
+      h('section', { class: 'card stack' }, h('h2', {}, 'About you'), identityFields(d), motivationField(d, draw)),
+      h('section', { class: 'card stack' }, h('h2', {}, 'Sports you play'), sportsPlayField(d, draw)),
+      h('section', { class: 'card stack' }, h('h2', {}, 'Sports you want to try'), sportsWantField(d, draw)),
+      h('section', { class: 'card stack' }, h('h2', {}, 'Schedule'), calendarField(d, draw)),
       error ? h('p', { class: 'notice notice--error', role: 'alert' }, error) : null,
-      kind === 'profile'
-        ? [identityFields(d), motivationField(d, draw)]
-        : [h('div', {}, h('h3', {}, 'Sports you play'), currentSportsField(d, draw)), h('div', {}, h('h3', {}, 'Sports you want to try'), desiredSportsField(d, draw)), h('div', {}, h('h3', {}, 'Calendar'), calendarField(d, draw))],
       h('div', {}, h('button', { class: 'btn btn--primary', type: 'button', onClick: save }, 'Save changes')))));
   }
   draw();
   return root;
 }
 
-export function render(args: string[]): HTMLElement
-{
+function personalization(): HTMLElement {
+  const me = currentUser()!;
+  const s = me.settings;
+  const toggle = (key: 'joins' | 'leaves' | 'friends', label: string, hint: string) =>
+    h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: s.notify[key], dataset: { key: `notify-${key}` }, onChange: (e: Event) => { updateSettings({ notify: { [key]: (e.target as HTMLInputElement).checked } }); } }),
+      h('span', { class: 'check__text' }, label, h('small', {}, hint)));
+  return h('div', { class: 'stack' },
+    h('section', { class: 'card stack' }, h('h2', {}, 'Appearance'),
+      h('div', { class: 'field' }, h('span', { class: 'field__label' }, 'Theme'),
+        seg('theme', [{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }], s.theme, (v) => updateSettings({ theme: v })))),
+    h('section', { class: 'card stack' }, h('h2', {}, 'Distance'),
+      h('div', { class: 'field' }, h('span', { class: 'field__label' }, 'Show distances in'),
+        seg('units', [{ value: 'km', label: 'Kilometres' }, { value: 'mi', label: 'Miles' }], s.units, (v) => updateSettings({ units: v })))),
+    h('section', { class: 'card stack' }, h('h2', {}, 'Notifications'),
+      toggle('joins', 'Someone joins my meetup', 'Includes when a meetup fills up.'),
+      toggle('leaves', 'Someone leaves my meetup', 'Changes apply straight away.'),
+      toggle('friends', 'Friend requests', 'New requests and when yours is accepted.')));
+}
+
+const FAQS: [string, string][] = [
+  ['How do I find a game?', 'Open Home or Map. Games that match your sports, skill level and schedule have yellow tags and a line explaining why.'],
+  ['How do I start my own game?', 'Use Create invite. Sport, place, time, number of people and at least one skill level are required. Everything else is optional.'],
+  ['I do not own any gear. Can I still play?', 'Yes. Look for the green "Gear shared" tag, or tap the (?) next to a sport name to see what you need and where to borrow it.'],
+  ['What does "Friends only" mean?', 'Only the host\'s friends can see and join the invite on the map. Everyone else will not see it.'],
+  ['How do I add a friend?', 'Open an invite, find someone in the list of who is going, and tap Add friend. They need to accept before you are friends. You do not have to be part of the invite.'],
+  ['Can I change my invite after people join?', 'The skill levels, vibe and who can see it can be changed only until someone joins. After that they are locked. You can still leave, and the next person becomes host.'],
+];
+
+function help(): HTMLElement {
+  return h('div', { class: 'card stack' }, h('h2', {}, 'Frequently asked questions'),
+    h('div', { class: 'faq-list' }, FAQS.map(([q, a]) => h('details', { class: 'faq' }, h('summary', {}, q), h('p', {}, a)))),
+    h('div', {}, h('button', { class: 'btn btn--secondary', type: 'button' }, 'Contact support')));   // intentionally does nothing
+}
+
+export function render(args: string[]): HTMLElement {
   const me = currentUser()!;
   const section = SECTIONS.some(([id]) => id === args[0]) ? args[0] : 'profile';
   const count = myUpcoming(me.id).length + myPast(me.id).length;
 
   let content: HTMLElement;
-  if (section === 'profile' || section === 'personalization') content = editor(section);
-  else if (section === 'activity')
-  {
+  if (section === 'profile') content = profileEditor();
+  else if (section === 'personalization') content = personalization();
+  else if (section === 'help') content = help();
+  else if (section === 'activity') {
     const up = myUpcoming(me.id), past = myPast(me.id), log = activityFor(me.id);
     content = h('div', { class: 'stack' },
       h('section', {}, h('h2', {}, 'Upcoming'), up.length ? h('div', { class: 'rec-list' }, up.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id) }))) : h('p', { class: 'muted' }, 'Nothing planned.')),
       h('section', {}, h('h2', {}, 'Past meetups'), past.length ? h('div', { class: 'rec-list' }, past.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id) }))) : h('p', { class: 'muted' }, 'No past meetups yet.')),
       h('section', {}, h('h2', {}, 'History'), log.length ? h('ul', { class: 'card activity-list' }, log.map((a) => h('li', {}, h('span', {}, a.text), h('time', {}, fmtAgo(a.at))))) : h('p', { class: 'muted' }, 'No activity yet.')));
-  } else if (section === 'help')
-  {
-    content = h('div', { class: 'card stack' }, h('h2', {}, 'Help'),
-      h('p', {}, h('strong', {}, 'Find a game: '), 'Open Map or Home. Yellow tags show what matches your profile.'),
-      h('p', {}, h('strong', {}, 'Start a game: '), 'Use Create invite. Sport, place, time and number of people are required.'),
-      h('p', {}, h('strong', {}, 'Need gear? '), 'Look for the green "Gear shared" tag, or open a sport page to see rentals.'),
-      h('p', {}, h('strong', {}, 'Make friends: '), 'Add people from a meetup you joined. Friends-only invites show just to friends.'));
-  } else content = h('div', { class: 'card stack' }, h('h2', {}, 'About us'), h('p', {}, 'Pickup helps people play sports together on short notice, or plan ahead. This is a course prototype with made-up data.'));
+  } else content = h('div', { class: 'card stack' }, h('h2', {}, 'About us'), h('p', {}, 'Kickoff helps people play sports together on short notice, or plan ahead. This is a course prototype with made-up data.'));
+
+  const askLogout = () => confirmDialog({
+    title: 'Log out?', body: 'You will go back to the welcome screen.',
+    actions: [{ label: 'Stay logged in' }, { label: 'Log out', variant: 'danger', onClick: () => { editing = null; setGuard(null); logout(); go('#/home'); toast('You are logged out.'); } }],
+  });
 
   return h('div', {},
     h('div', { class: 'profile-head' }, avatar(me, 'xl'), h('div', {}, h('h1', {}, me.name), h('p', { class: 'muted' }, `${count} meetup${count === 1 ? '' : 's'}`))),
     h('div', { class: 'profile-layout' },
       h('nav', { class: 'card menu-list', 'aria-label': 'Profile sections' },
         SECTIONS.map(([id, label]) => h('a', { href: id === 'profile' ? '#/profile' : `#/profile/${id}`, 'aria-current': id === section ? 'page' : null }, label)),
-        h('button', { class: 'is-danger', type: 'button', onClick: () => { logout(); go('#/home'); toast('You are logged out.'); } }, 'Log out')),
+        h('button', { class: 'is-danger', type: 'button', onClick: askLogout }, 'Log out')),
       content));
 }

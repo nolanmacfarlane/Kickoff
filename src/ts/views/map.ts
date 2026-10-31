@@ -1,12 +1,14 @@
-// Map tab: stylized Victoria with invite pins, filters for sport / time / gear, popup and side list.
-import { inviteCard, inviteTags } from '../components/inviteCard';
+// Map tab: a full-page Leaflet map with floating filters (top left) and floating invite cards (right).
+// Invites at the same place share one pin with a count. Selecting it lists those invites first.
+import { inviteCard } from '../components/inviteCard';
 import { mapWidget } from '../components/mapWidget';
+import { groupInvites, groupKey, groupPins, type PinGroup } from '../components/pinGroups';
 import { sports } from '../data';
-import { fmtWhen, h, keepFocus } from '../dom';
-import { matchInvite } from '../match';
-import { currentUser, getSport, mapInvites } from '../state';
+import { append, h, keepFocus } from '../dom';
+import { currentUser, getInvite, getSport, mapInvites } from '../state';
 import type { Invite } from '../types';
 import { openInvite } from './inviteDetail';
+import { openSportInfo } from './sportInfo';
 
 const filters = { sport: 'all', time: 'any', gear: 'any' };   // survives re-renders and tab switches
 const DAY = 86_400_000;
@@ -20,60 +22,90 @@ function passesTime(inv: Invite): boolean
   if (filters.time === 'week') return days >= 0 && days < 7;
   return true;
 }
+const passesFilters = (i: Invite) =>
+  (filters.sport === 'all' || i.sportId === filters.sport) && passesTime(i) && (filters.gear === 'any' || i.gear.available);
 
 export function render(args: string[]): HTMLElement
 {
   const me = currentUser()!;
-  let selected: string | null = args[0] ?? null;
-  const root = h('div', {});
+  let selectedInvite: string | null = args[0] ?? null;   // one invite (highlighted card)
+  let selectedGroup: string | null = null;               // the pin it belongs to
+  let groups: PinGroup[] = [];
+  const filtersEl = h('div', { class: 'map-filters' });
+  const sideEl = h('div', { class: 'map-side' });
 
-  function select(label: string, key: 'sport' | 'time' | 'gear', opts: [string, string][]): HTMLElement
+  // Arriving from "Show on map": if an old filter would hide that invite, clear the filters so it can be shown.
+  const wanted = selectedInvite ? getInvite(selectedInvite) : undefined;
+  if (wanted)
   {
-    return h('label', { class: 'field' }, h('span', { class: 'sr-only' }, label),
-      h('select', {
-        class: 'select', value: filters[key], 'aria-label': label, dataset: { key: `f-${key}` },
-        onChange: (e: Event) => { filters[key] = (e.target as HTMLSelectElement).value; selected = null; draw(); }
-      },
-        opts.map(([v, l]) => h('option', { value: v }, l))));
+    selectedGroup = groupKey(wanted);
+    if (!passesFilters(wanted)) { filters.sport = 'all'; filters.time = 'any'; filters.gear = 'any'; }
   }
 
-  function draw(): void
-  {
-    const list = mapInvites(me.id).filter((i) =>
-      (filters.sport === 'all' || i.sportId === filters.sport) && passesTime(i) && (filters.gear === 'any' || i.gear.available));
-    if (selected && !list.some((i) => i.id === selected)) selected = null;
-    const sel = list.find((i) => i.id === selected);
-
-    const mapEl = mapWidget({
-      legend: true, selectedId: selected, onSelect: (id) => { selected = selected === id ? null : id; draw(); },
-      pins: list.map((i) => ({
-        id: i.id, x: i.location.x, y: i.location.y, glyph: getSport(i.sportId)!.name.charAt(0), label: `${getSport(i.sportId)!.name} at ${i.location.label}`,
-        variant: matchInvite(i, me).keys.has('sport') ? 'match' : i.visibility === 'friends' ? 'friends' : undefined,
-      })),
-    });
-    if (sel)
+  const handle = mapWidget({
+    key: 'main', user: me, zoom: 13, remember: true, pins: [],
+    onSelect: (key) =>
     {
-      const side = sel.location.x > 60 ? 'map-pop--left' : sel.location.x < 20 ? 'map-pop--right' : sel.location.y < 30 ? 'map-pop--below' : '';
-      mapEl.append(h('div', { class: `map-pop ${side}`.trim(), style: `left:${sel.location.x}%;top:${sel.location.y}%` },
-        h('strong', {}, getSport(sel.sportId)!.name), h('span', { class: 'card__meta' }, fmtWhen(sel.start, sel.end)), inviteTags(sel, me),
-        h('button', { class: 'btn btn--primary btn--sm', type: 'button', onClick: () => openInvite(sel.id) }, 'View details')));
-    }
+      const g = groups.find((x) => x.key === key);
+      if (!g) return;
+      if (g.invites.length === 1)
+      {                       // one invite here: select it (click again to deselect)
+        const same = selectedInvite === g.invites[0].id;
+        selectedInvite = same ? null : g.invites[0].id; selectedGroup = same ? null : key;
+      } else if (selectedGroup === key && selectedInvite === null) selectedGroup = null;   // several: show them all, click again to clear
+      else { selectedGroup = key; selectedInvite = null; }
+      update();
+    },
+  });
+  const stage = h('div', { class: 'map-page' }, handle.el, filtersEl, sideEl);
 
-    keepFocus(() => root.replaceChildren(
-      h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, 'Map'), h('p', {}, `${list.length} open invite${list.length === 1 ? '' : 's'}. Full meetups are hidden.`))),
-      h('div', { class: 'map-filters' },
-        select('Sport', 'sport', [['all', 'All sports'], ...sports.map((s): [string, string] => [s.id, s.name])]),
-        select('Time', 'time', [['any', 'Any time'], ['today', 'Today'], ['tomorrow', 'Tomorrow'], ['week', 'Next 7 days']]),
-        select('Gear', 'gear', [['any', 'Gear: any'], ['shared', 'Gear shared']]),
-        filters.sport !== 'all' || filters.time !== 'any' || filters.gear !== 'any'
-          ? h('button', { class: 'btn btn--text', type: 'button', onClick: () => { filters.sport = 'all'; filters.time = 'any'; filters.gear = 'any'; draw(); } }, 'Clear filters') : null),
-      h('div', { class: 'map-layout' }, mapEl,
-        h('div', { class: 'map-side' }, list.length
-          ? list.map((i) => inviteCard(i, me, { selected: i.id === selected, onOpen: () => openInvite(i.id), onShowMap: () => { selected = i.id; draw(); } }))
-          : h('div', { class: 'empty' }, h('h3', {}, 'No invites match'), h('p', {}, 'Try another sport or time, or start the game yourself.'),
-            h('a', { class: 'btn btn--primary', href: '#/create' }, 'Create an invite'))))));
+  function filterSelect(label: string, key: 'sport' | 'time' | 'gear', opts: [string, string][]): HTMLElement
+  {
+    return h('select', {
+      class: 'select', value: filters[key], 'aria-label': label, dataset: { key: `f-${key}` },
+      onChange: (e: Event) => { filters[key] = (e.target as HTMLSelectElement).value; selectedInvite = null; selectedGroup = null; update(); }
+    },
+      opts.map(([v, l]) => h('option', { value: v }, l)));
+  }
+  function clearSelection(): void { selectedInvite = null; selectedGroup = null; update(); }
+  function showOnMap(i: Invite): void { selectedInvite = i.id; selectedGroup = groupKey(i); update(); handle.focus(selectedGroup, true); }
+
+  function update(): void
+  {
+    const list = mapInvites(me.id).filter(passesFilters);
+    groups = groupInvites(list);
+    if (selectedInvite && !list.some((i) => i.id === selectedInvite)) selectedInvite = null;
+    if (selectedGroup && !groups.some((g) => g.key === selectedGroup)) { selectedGroup = null; selectedInvite = null; }
+    handle.setPins(groupPins(groups, me), selectedGroup);
+    const active = filters.sport !== 'all' || filters.time !== 'any' || filters.gear !== 'any';
+
+    // Cards: invites at the selected pin come first, under a heading.
+    const group = groups.find((g) => g.key === selectedGroup && g.invites.length > 1);
+    const ordered = group ? [...group.invites, ...list.filter((i) => !group.invites.includes(i))] : list;
+    const isSelected = (i: Invite) => (selectedInvite ? i.id === selectedInvite : !!group && group.invites.includes(i));
+
+    keepFocus(() =>
+    {
+      filtersEl.replaceChildren();
+      append(filtersEl, [
+        filterSelect('Sport', 'sport', [['all', 'All sports'], ...sports.map((s): [string, string] => [s.id, s.name])]),
+        filterSelect('Time', 'time', [['any', 'Any time'], ['today', 'Today'], ['tomorrow', 'Tomorrow'], ['week', 'Next 7 days']]),
+        filterSelect('Gear', 'gear', [['any', 'Gear: any'], ['shared', 'Gear shared']]),
+        filters.sport !== 'all' ? h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => openSportInfo(filters.sport) }, `About ${getSport(filters.sport)!.name}`) : null,
+        active ? h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => { filters.sport = 'all'; filters.time = 'any'; filters.gear = 'any'; clearSelection(); } }, 'Clear filters') : null]);
+      sideEl.replaceChildren();
+      append(sideEl, ordered.length ? [
+        group ? h('div', { class: 'card card--tight map-group-head' }, h('strong', {}, `${group.invites.length} invites at ${group.label}`),
+          h('button', { class: 'btn btn--text btn--sm', type: 'button', onClick: clearSelection }, 'Show all')) : null,
+        ...ordered.map((i) => inviteCard(i, me, { selected: isSelected(i), onOpen: () => openInvite(i.id), onShowMap: () => showOnMap(i), onAbout: () => openSportInfo(i.sportId) })),
+      ] : [h('div', { class: 'card empty' }, h('h3', {}, 'No invites match'), h('p', {}, 'Try another sport or time, or start the game yourself.'),
+        h('a', { class: 'btn btn--primary', href: '#/create' }, 'Create an invite'))]);
+    });
+    const focusId = selectedInvite ?? group?.invites[0].id;
+    if (focusId) sideEl.querySelector(`[data-invite="${focusId}"]`)?.scrollIntoView?.({ block: 'nearest' });
   }
 
-  draw();
-  return root;
+  update();
+  if (selectedGroup) handle.focus(selectedGroup, true);   // arrived from "Show on map" elsewhere
+  return stage;
 }

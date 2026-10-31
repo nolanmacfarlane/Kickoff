@@ -1,33 +1,25 @@
 /* Design tokens. Change a value here and it changes everywhere. */
 :root {
   /* colour */
-  --ink: #14231f;
-  /* fir: text, filled controls */
-  --ink-2: #44554f;
-  /* secondary text */
-  --ink-3: #66756f;
-  /* hints, meta */
-  --paper: #f4f7f4;
-  /* page */
-  --surface: #ffffff;
-  /* cards, panels */
+  --ink: #14231f;           /* fir: text, filled controls */
+  --on-ink: #ffffff;        /* text on top of an --ink background */
+  --ink-2: #44554f;         /* secondary text */
+  --ink-3: #66756f;         /* hints, meta */
+  --paper: #f4f7f4;         /* page */
+  --surface: #ffffff;       /* cards, panels */
   --line: #d9e1dc;
   --line-strong: #b4c2bb;
 
-  --primary: #0b6b72;
-  /* Pacific teal: main actions, links */
+  --primary: #0b6b72;       /* Pacific teal: main actions, links */
   --primary-hover: #095860;
   --primary-soft: #dcefef;
   --on-primary: #ffffff;
 
-  --mark: #f5c518;
-  /* court-line yellow: ONLY for "matches your profile" highlights */
+  --mark: #f5c518;          /* court-line yellow: ONLY for "matches your profile" highlights */
   --mark-soft: #fdf1bd;
 
-  --good: #1f6f45;
-  --good-soft: #dff2e6;
-  --bad: #a8321f;
-  --bad-soft: #fbe4df;
+  --good: #1f6f45;  --good-soft: #dff2e6;
+  --bad: #a8321f;   --bad-soft: #fbe4df;
 
   /* stylized map */
   --water: #cfe5ec;
@@ -48,27 +40,30 @@
   --text-3xl: 2.5rem;
 
   /* space */
-  --s-1: 0.25rem;
-  --s-2: 0.5rem;
-  --s-3: 0.75rem;
-  --s-4: 1rem;
-  --s-5: 1.5rem;
-  --s-6: 2rem;
-  --s-7: 3rem;
+  --s-1: 0.25rem; --s-2: 0.5rem; --s-3: 0.75rem; --s-4: 1rem;
+  --s-5: 1.5rem;  --s-6: 2rem;   --s-7: 3rem;
 
   /* shape: different radii for different jobs */
-  --r-sm: 6px;
-  /* tags, small controls */
-  --r-md: 10px;
-  /* inputs, buttons */
-  --r-lg: 16px;
-  /* cards */
-  --r-xl: 22px;
-  /* panels, modals */
+  --r-sm: 6px;      /* tags, small controls */
+  --r-md: 10px;     /* inputs, buttons */
+  --r-lg: 16px;     /* cards */
+  --r-xl: 22px;     /* panels, modals */
   --r-pill: 999px;
 
   --shadow-pop: 0 10px 30px rgba(20, 35, 31, 0.18);
 
   --topbar-h: 68px;
   --page-max: 1240px;
+}
+
+/* Dark theme: set on <html data-theme="dark"> from Profile > Personalization */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e8f0ec; --on-ink: #0f1a17; --ink-2: #b4c4bd; --ink-3: #8fa199;
+  --paper: #0f1a17; --surface: #172420; --line: #2a3a35; --line-strong: #44574f;
+  --primary: #4fc3cc; --primary-hover: #7ad6dd; --primary-soft: #12363a; --on-primary: #06201f;
+  --mark-soft: #4a3f0a;
+  --good: #6bd49b; --good-soft: #143826; --bad: #ff8a78; --bad-soft: #40201b;
+  --water: #1b2b30; --land: #1d2a25; --park: #223a2a; --road: #2e3f39; --road-edge: #3a4d46;
+  --shadow-pop: 0 10px 30px rgba(0, 0, 0, 0.55);
 }

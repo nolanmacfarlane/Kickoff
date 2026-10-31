@@ -1,1 +1,3 @@
 node_modules/
+public/app.js
+src/ts/components/tiles.ts

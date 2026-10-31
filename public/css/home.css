@@ -1,5 +1,5 @@
 /* Home: greeting, recommended invites, mini map, recent activity.
-   Class vocabulary: .greeting .rec-list .rec-card .mini-map .activity-list */
+   Class vocabulary: .greeting .rec-list .rec-card .mini-map .mini-map__link .activity-list */
 .greeting h1 {
    font-size: var(--text-3xl);
 }
@@ -47,21 +47,6 @@
    color: var(--ink-2);
 }
 
-.mini-map {
-   position: relative;
-   height: 280px;
-}
-
-.mini-map .map {
-   height: 100%;
-}
-
-.mini-map .pin {
-   width: 26px;
-   height: 26px;
-   border-width: 2px;
-}
-
 .activity-list {
    display: grid;
 }
@@ -82,4 +67,38 @@
 .activity-list time {
    color: var(--ink-3);
    white-space: nowrap;
+}
+
+.mini-map {
+   position: relative;
+   height: 300px;
+   border: 1px solid var(--line-strong);
+   border-radius: var(--r-xl);
+   overflow: hidden;
+}
+
+.mini-map .map {
+   height: 100%;
+}
+
+.mini-map .pin {
+   --size: 26px;
+}
+
+.mini-map .pin--group {
+   --size: 30px;
+}
+
+/* The whole map is one big link to the Map tab */
+.mini-map__link {
+   position: absolute;
+   inset: 0;
+   z-index: 5;
+   display: block;
+   cursor: pointer;
+   border-radius: inherit;
+}
+
+.mini-map__link:hover {
+   box-shadow: inset 0 0 0 3px var(--primary);
 }

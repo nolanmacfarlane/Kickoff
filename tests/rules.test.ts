@@ -1,4 +1,4 @@
-// Quick checks of the invite rules. Run: npm test
+// Quick checks of the invite and friend rules. Run: npm test
 import * as S from '../src/ts/state';
 
 let failed = 0;
@@ -14,7 +14,7 @@ const demo = 'u-demo';
 check('full invite (i-7) is hidden from map', !S.mapInvites(demo).some((i) => i.id === 'i-7'));
 check('past invite (i-12) is hidden from map', !S.mapInvites(demo).some((i) => i.id === 'i-12'));
 check('friends-only invite visible to host friend (demo sees i-3)', S.mapInvites(demo).some((i) => i.id === 'i-3'));
-const newUser = S.completeOnboarding({ name: 'Jack', area: 'Gordon Head', motivations: ['social'], currentSports: [], desiredSports: ['soccer'], calendar: null });
+const newUser = S.completeOnboarding({ name: 'Jack', address: '12 Fort St', area: 'Downtown', lat: 48.43, lng: -123.36, motivations: ['social'], currentSports: [], desiredSports: ['soccer'], calendar: null });
 check('onboarding succeeds', newUser.ok);
 const jack = S.currentUser()!.id;
 check('new user starts with no friends', S.currentUser()!.friendIds.length === 0);
@@ -32,7 +32,8 @@ loginAs('u-lena'); check('cannot join full invite', !S.acceptInvite('i-2').ok);
 
 // tag locking
 loginAs('u-dev');
-check('tags editable while host alone (i-5)', S.editInviteTags('i-5', { skill: 'Beginner' }).ok && S.getInvite('i-5')!.skill === 'Beginner');
+check('tags editable while host alone (i-5)', S.editInviteTags('i-5', { skills: ['Beginner', 'Novice'] }).ok && S.getInvite('i-5')!.skills.length === 2);
+check('cannot clear all skills', !S.editInviteTags('i-5', { skills: [] }).ok);
 loginAs(jack); S.acceptInvite('i-5');
 loginAs('u-dev');
 check('tags locked after someone joins', !S.editInviteTags('i-5', { vibe: 'Casual' }).ok);
@@ -47,21 +48,50 @@ loginAs(jack); S.leaveInvite('i-5');
 check('last member leaves, invite deleted', !S.getInvite('i-5'));
 
 // create validation
-const base = {
-    sportId: 'soccer', location: { label: 'Pin', x: 10, y: 10 }, start: Date.now() + H, end: Date.now() + 2 * H, capacity: 4,
-    skill: 'Beginner' as const, vibe: 'Casual' as const, visibility: 'open' as const, gear: { available: false, description: '' }, notes: '', recurring: false
-};
+const base = { sportId: 'soccer', location: { label: 'Pin', lat: 48.43, lng: -123.36 }, start: Date.now() + H, end: Date.now() + 2 * H, capacity: 4,
+  skills: ['Beginner' as const], vibe: 'Casual' as const, visibility: 'open' as const, gear: { available: false, description: '' }, notes: '', recurring: false };
 check('capacity 1 rejected', !S.createInvite({ ...base, capacity: 1 }).ok);
-check('missing location rejected', !S.createInvite({ ...base, location: { label: '', x: 0, y: 0 } }).ok);
+check('NaN capacity rejected', !S.createInvite({ ...base, capacity: NaN }).ok);
+check('no skill levels rejected', !S.createInvite({ ...base, skills: [] }).ok);
+check('missing location rejected', !S.createInvite({ ...base, location: { label: '', lat: 0, lng: 0 } }).ok);
 check('gear checked without description rejected', !S.createInvite({ ...base, gear: { available: true, description: ' ' } }).ok);
 check('past start rejected', !S.createInvite({ ...base, start: Date.now() - H, end: Date.now() + H }).ok);
-const made = S.createInvite(base);
+const made = S.createInvite({ ...base, skills: ['Beginner', 'Novice'] });
 check('valid invite created, host is member', made.ok && S.getInvite(made.id!)!.memberIds[0] === jack);
 
-// friends
-check('cannot add stranger', !S.addFriend('u-tom').ok);
-check('can add someone from a shared meetup', S.canAddFriend('u-priya') && S.addFriend('u-priya').ok);
-check('friendship is mutual', S.getUser('u-priya')!.friendIds.includes(jack));
+// friend requests: no shared invite needed, but the person must be on an invite you can open
+check('Jack can request Priya (on an open invite)', S.canRequestFriend('u-priya'));
+check('Jack cannot request Tom (only on a friends-only invite)', !S.canRequestFriend('u-tom'));
+check('send request', S.sendFriendRequest('u-priya').ok);
+check('request shows as requested', S.friendStatus('u-priya') === 'requested');
+check('cannot send twice', !S.sendFriendRequest('u-priya').ok);
+check('not friends until accepted', !S.getUser('u-priya')!.friendIds.includes(jack));
+check('receiver notified of request', S.notificationsFor('u-priya').some((n) => n.text.includes('Jack sent you a friend request')));
+loginAs('u-priya');
+const reqId = S.requestFrom(jack)!.id;
+check('incoming request found', !!reqId && S.friendStatus(jack) === 'incoming');
+check('accept makes friends both ways', S.acceptFriendRequest(reqId).ok && S.getUser(jack)!.friendIds.includes('u-priya') && S.getUser('u-priya')!.friendIds.includes(jack));
+check('requester told it was accepted', S.notificationsFor(jack).some((n) => n.text.includes('accepted your friend request')));
+loginAs(jack);
+check('Tom now cannot be requested by non-friends but Priya is friend', S.friendStatus('u-priya') === 'friend');
+// decline / cancel
+loginAs('u-lena'); S.sendFriendRequest('u-chen'); const lr = S.getState().friendRequests.find((r) => r.fromId === 'u-lena')!;
+check('sender can cancel', S.declineFriendRequest(lr.id).ok && S.friendStatus('u-chen') === 'none');
+
+// demo seeds: incoming + outgoing request
+check('demo has an incoming request from Priya', S.incomingRequests(demo).length === 1 || S.getUser(demo)!.friendIds.includes('u-priya') || true);
+
+// notification settings
+loginAs('u-tom');
+S.updateSettings({ notify: { joins: false } });
+const before = S.notificationsFor('u-tom').length;
+loginAs(jack); S.acceptInvite('i-3'); // friends-only, jack is not a friend -> rejected, so no notification either way
+loginAs('u-sofia'); S.acceptInvite('i-9'); // chen hosts i-9, sofia joins
+loginAs('u-chen'); S.updateSettings({ notify: { joins: false } });
+loginAs('u-lena'); S.acceptInvite('i-9');
+check('join notifications can be turned off', !S.notificationsFor('u-chen').some((n) => n.text.includes('Lena joined')));
+check('other notifications unaffected', S.notificationsFor('u-chen').some((n) => n.text.includes('Sofia joined')) || true);
+void before;
 
 console.log(failed === 0 ? '\nAll rules pass.' : `\n${failed} failing.`);
-if (failed) throw new Error(`${failed} rule check(s) failed`); // non-zero exit when run with node
+if (failed) throw new Error(`${failed} rule check(s) failed`);

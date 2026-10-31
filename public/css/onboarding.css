@@ -1,108 +1,41 @@
 /* Onboarding wizard: .onboarding .stepper .choice-grid .choice .skill-row */
-.onboarding {
-  max-width: 680px;
-  margin: var(--s-5) auto 0;
-}
+.onboarding { max-width: 680px; margin: var(--s-5) auto 0; }
+.onboarding__card { padding: var(--s-6); border-radius: var(--r-xl); }
+.onboarding h1 { margin-bottom: var(--s-2); }
+.onboarding__lede { color: var(--ink-2); margin-bottom: var(--s-5); }
 
-.onboarding__card {
-  padding: var(--s-6);
-  border-radius: var(--r-xl);
-}
+.stepper { display: flex; gap: var(--s-2); margin-bottom: var(--s-5); }
+.stepper__step { flex: 1; height: 6px; border-radius: var(--r-pill); background: var(--line); }
+.stepper__step[data-state="done"] { background: var(--primary); }
+.stepper__step[data-state="current"] { background: var(--ink); }
 
-.onboarding h1 {
-  margin-bottom: var(--s-2);
-}
-
-.onboarding__lede {
-  color: var(--ink-2);
-  margin-bottom: var(--s-5);
-}
-
-.stepper {
-  display: flex;
-  gap: var(--s-2);
-  margin-bottom: var(--s-5);
-}
-
-.stepper__step {
-  flex: 1;
-  height: 6px;
-  border-radius: var(--r-pill);
-  background: var(--line);
-}
-
-.stepper__step[data-state="done"] {
-  background: var(--primary);
-}
-
-.stepper__step[data-state="current"] {
-  background: var(--ink);
-}
-
-.choice-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: var(--s-3);
-}
-
+.choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--s-3); }
 .choice {
-  display: grid;
-  gap: 2px;
-  padding: var(--s-3) var(--s-4);
-  text-align: left;
-  background: var(--surface);
-  border: 1.5px solid var(--line-strong);
-  border-radius: var(--r-md);
+  display: grid; gap: 2px; padding: var(--s-3) var(--s-4); text-align: left;
+  background: var(--surface); border: 1.5px solid var(--line-strong); border-radius: var(--r-md);
 }
+.choice:hover { border-color: var(--ink); }
+.choice[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); }
+.choice small { color: var(--ink-3); }
 
-.choice:hover {
-  border-color: var(--ink);
-}
+.skill-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) 0; border-bottom: 1px solid var(--line); }
+.calendar-grid { display: grid; grid-template-columns: 56px repeat(7, 1fr); gap: 2px; font-size: var(--text-xs); }
+.calendar-grid .cell { min-height: 22px; background: var(--paper); border-radius: 3px; }
+.calendar-grid .cell--busy { background: var(--ink-3); }
+.onboarding__actions { display: flex; justify-content: space-between; gap: var(--s-3); margin-top: var(--s-6); }
+.onboarding__skip { margin-top: var(--s-4); text-align: center; }
 
-.choice[aria-pressed="true"] {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-  box-shadow: 0 0 0 1.5px var(--primary);
-}
+/* Sport lists (onboarding + profile): one row per sport */
+.sport-list { display: grid; }
+.sport-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3) var(--s-4); padding: var(--s-3) 0; border-bottom: 1px solid var(--line); }
+.sport-row:last-child { border-bottom: 0; }
+.sport-row__name { display: grid; }
+.sport-row__name small { color: var(--ink-3); }
 
-.choice small {
-  color: var(--ink-3);
-}
-
-.skill-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  padding: var(--s-3) 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: 56px repeat(7, 1fr);
-  gap: 2px;
-  font-size: var(--text-xs);
-}
-
-.calendar-grid .cell {
-  min-height: 22px;
-  background: var(--paper);
-  border-radius: 3px;
-}
-
-.calendar-grid .cell--busy {
-  background: var(--ink-3);
-}
-
-.onboarding__actions {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--s-3);
-  margin-top: var(--s-6);
-}
-
-.onboarding__skip {
-  margin-top: var(--s-4);
-  text-align: center;
-}
+/* Slide between steps: new content comes in from the right, going back comes in from the left */
+.slide-forward { animation: slide-forward .32s ease-in-out; }
+.slide-back { animation: slide-back .32s ease-in-out; }
+@keyframes slide-forward { from { opacity: 0; transform: translateX(48px); } to { opacity: 1; transform: none; } }
+@keyframes slide-back { from { opacity: 0; transform: translateX(-48px); } to { opacity: 1; transform: none; } }
+.onboarding__card { overflow: hidden; }
+.onboarding .notice { margin-top: var(--s-4); }

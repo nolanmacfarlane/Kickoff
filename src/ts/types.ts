@@ -1,34 +1,42 @@
 // Shared types for the whole app. No logic lives here.
 
-export type Skill = 'Beginner' | 'Intermediate' | 'Advanced';
-export type InviteSkill = Skill | 'All levels';
+export type Skill = 'Beginner' | 'Novice' | 'Intermediate' | 'Advanced';
 export type Vibe = 'Casual' | 'Competitive';
 /** "open" = visible to everyone on the map, "friends" = host's friends only */
 export type Visibility = 'open' | 'friends';
 export type Motivation = 'exercise' | 'challenge' | 'competition' | 'social' | 'learn';
 
+export interface LatLng { lat: number; lng: number }
 export interface SportSkill { sportId: string; skill: Skill }
 
 /** Fake calendar: a recurring weekly busy block (day 0 = Sunday). */
 export interface BusyBlock { day: number; startHour: number; endHour: number; label: string }
 
-export interface User
-{
+export interface Settings {
+  theme: 'light' | 'dark';
+  units: 'km' | 'mi';
+  notify: { joins: boolean; leaves: boolean; friends: boolean };
+}
+
+export interface User {
   id: string;
   name: string;
   avatarColor: string;
-  area: string;                 // neighbourhood, from onboarding
+  address: string;              // what the user typed in onboarding
+  area: string;                 // neighbourhood found from the address (fake lookup)
+  lat: number;                  // "you are here" on the map
+  lng: number;
   motivations: Motivation[];
   currentSports: SportSkill[];
   desiredSports: string[];      // sport ids
   calendar: BusyBlock[] | null; // null = not synced (optional step)
   friendIds: string[];
+  settings: Settings;
 }
 
 export interface GearItem { item: string; required: boolean; note: string }
 
-export interface Sport
-{
+export interface Sport {
   id: string;
   name: string;
   tagline: string;
@@ -36,37 +44,28 @@ export interface Sport
   typicalGroup: string;
   soloFriendly: boolean;        // can be done individually, but invites still make it social
   motivations: Motivation[];
-  gear: GearItem[];
-  howToStart: string[];
+  gear: GearItem[];             // only gear a newcomer would not assume
 }
 
 export type VenueKind = 'gym' | 'park' | 'field' | 'court' | 'cages' | 'trail';
 
-/** Preset venue. Map coordinates are percentages (0-100) of the stylized map. */
-export interface Venue
-{
+export interface Venue extends LatLng {
   id: string;
   name: string;
   kind: VenueKind;
   area: string;
-  x: number;
-  y: number;
   hours: string;
   sportIds: string[];
   rentals: string[];            // what can be rented on site
   info: string;
 }
 
-export interface InviteLocation
-{
+export interface InviteLocation extends LatLng {
   label: string;
-  x: number;
-  y: number;
   venueId?: string;             // absent = freeform pin
 }
 
-export interface Invite
-{
+export interface Invite {
   id: string;
   hostId: string;
   memberIds: string[];          // host included; memberIds[0] is always the host
@@ -75,7 +74,7 @@ export interface Invite
   start: number;                // epoch ms
   end: number;
   capacity: number;             // host included, minimum 2
-  skill: InviteSkill;
+  skills: Skill[];              // one or more levels welcome; all four = "All levels"
   vibe: Vibe;
   visibility: Visibility;
   gear: { available: boolean; description: string };
@@ -83,28 +82,34 @@ export interface Invite
   recurring: boolean;           // weekly, for informal teams
 }
 
-export interface Notification
-{
+export type NotificationKind = 'join' | 'leave' | 'friend' | 'other';
+
+export interface Notification {
   id: string;
   userId: string;               // who receives it
   inviteId: string | null;
+  kind: NotificationKind;
   text: string;
   createdAt: number;
   read: boolean;
 }
 
+export interface FriendRequest { id: string; fromId: string; toId: string; createdAt: number }
+export type FriendStatus = 'self' | 'friend' | 'requested' | 'incoming' | 'none';
+
 export interface ActivityItem { id: string; userId: string; text: string; at: number; inviteId: string | null }
 
-export interface AppState
-{
+export interface AppState {
   currentUserId: string | null;
   users: Record<string, User>;
   invites: Invite[];
   notifications: Notification[];
   activity: ActivityItem[];
+  friendRequests: FriendRequest[];
 }
 
 export type Result = { ok: true; id?: string } | { ok: false; error: string };
 
 export type NewInviteInput = Omit<Invite, 'id' | 'hostId' | 'memberIds'>;
-export type TagEdit = Partial<Pick<Invite, 'skill' | 'vibe' | 'visibility'>>;
+export type TagEdit = Partial<Pick<Invite, 'skills' | 'vibe' | 'visibility'>>;
+export type SettingsPatch = Partial<Omit<Settings, 'notify'>> & { notify?: Partial<Settings['notify']> };

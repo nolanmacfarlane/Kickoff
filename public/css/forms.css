@@ -1,149 +1,38 @@
 /* Form controls. Class vocabulary: .field .field__label .field__hint .field__error .seg .check .stepper-row */
-.field {
-  display: grid;
-  gap: var(--s-1);
-}
+.field { display: grid; gap: var(--s-1); }
+.field__label { font-weight: 600; font-size: var(--text-sm); }
+.field__hint { color: var(--ink-3); font-size: var(--text-xs); }
+.field__error { color: var(--bad); font-size: var(--text-sm); font-weight: 500; }
+.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s-4); }
 
-.field__label {
-  font-weight: 600;
-  font-size: var(--text-sm);
+.input, .select, .textarea {
+  width: 100%; min-height: 44px; padding: 0 var(--s-3);
+  background: var(--surface); border: 1.5px solid var(--line-strong); border-radius: var(--r-md);
 }
-
-.field__hint {
-  color: var(--ink-3);
-  font-size: var(--text-xs);
-}
-
-.field__error {
-  color: var(--bad);
-  font-size: var(--text-sm);
-  font-weight: 500;
-}
-
-.field-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--s-4);
-}
-
-.input,
-.select,
-.textarea {
-  width: 100%;
-  min-height: 44px;
-  padding: 0 var(--s-3);
-  background: var(--surface);
-  border: 1.5px solid var(--line-strong);
-  border-radius: var(--r-md);
-}
-
-.textarea {
-  padding: var(--s-3);
-  min-height: 88px;
-  resize: vertical;
-}
-
-.input:hover,
-.select:hover,
-.textarea:hover {
-  border-color: var(--ink-2);
-}
-
-.input[aria-invalid="true"],
-.select[aria-invalid="true"] {
-  border-color: var(--bad);
-}
+.textarea { padding: var(--s-3); min-height: 88px; resize: vertical; }
+.input:hover, .select:hover, .textarea:hover { border-color: var(--ink-2); }
+.input[aria-invalid="true"], .select[aria-invalid="true"] { border-color: var(--bad); }
 
 /* Segmented control: pick one of a few short options (skill, vibe, who can see it) */
-.seg {
-  display: inline-flex;
-  border: 1.5px solid var(--line-strong);
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background: var(--surface);
-}
-
-.seg>button {
-  min-height: 40px;
-  padding: 0 var(--s-4);
-  border: 0;
-  background: none;
-  font-weight: 500;
-}
-
-.seg>button+button {
-  border-left: 1.5px solid var(--line-strong);
-}
-
-.seg>button[aria-pressed="true"] {
-  background: var(--ink);
-  color: #fff;
-}
-
-.seg>button[disabled] {
-  opacity: .5;
-  cursor: not-allowed;
-}
-
-.seg--locked {
-  opacity: .7;
-}
+.seg { display: inline-flex; width: fit-content; max-width: 100%; flex-wrap: wrap; border: 1.5px solid var(--line-strong); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.seg > button { min-height: 40px; padding: 0 var(--s-4); border: 0; background: none; font-weight: 500; }
+.seg > button + button { border-left: 1.5px solid var(--line-strong); }
+.seg > button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
+.seg > button[disabled] { opacity: .5; cursor: not-allowed; }
+.seg--locked { opacity: .7; }
 
 /* Checkbox / toggle row */
-.check {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--s-3);
-  cursor: pointer;
-}
-
-.check input {
-  width: 22px;
-  height: 22px;
-  margin: 1px 0 0;
-  accent-color: var(--primary);
-  flex: none;
-}
-
-.check__text {
-  display: grid;
-}
-
-.check__text small {
-  color: var(--ink-3);
-}
+.check { display: flex; align-items: flex-start; gap: var(--s-3); cursor: pointer; }
+.check input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--primary); flex: none; }
+.check__text { display: grid; }
+.check__text small { color: var(--ink-3); }
 
 /* Number stepper for capacity */
-.stepper-row {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-3);
-}
+.stepper-row { display: inline-flex; align-items: center; gap: var(--s-3); }
+.stepper-row output { min-width: 2ch; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: var(--text-xl); }
+.stepper-row .btn { width: 42px; padding: 0; font-size: var(--text-lg); }
 
-.stepper-row output {
-  min-width: 2ch;
-  text-align: center;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-xl);
-}
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+legend { padding: 0; font-weight: 600; font-size: var(--text-sm); margin-bottom: var(--s-2); }
 
-.stepper-row .btn {
-  width: 42px;
-  padding: 0;
-  font-size: var(--text-lg);
-}
-
-fieldset {
-  border: 0;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
-}
-
-legend {
-  padding: 0;
-  font-weight: 600;
-  font-size: var(--text-sm);
-  margin-bottom: var(--s-2);
-}
+.input--narrow { width: 7rem; }

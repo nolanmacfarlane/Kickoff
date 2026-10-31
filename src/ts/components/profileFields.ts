@@ -1,41 +1,39 @@
 // Profile inputs shared by onboarding and the Profile tab. They edit a draft object, then call redraw().
-import { areas, motivationOptions, sampleCalendar, sports } from '../data';
+import { geocode, motivationOptions, sampleCalendar, SKILLS, sports } from '../data';
 import { h } from '../dom';
 import type { BusyBlock, Motivation, Skill, User } from '../types';
-import { seg } from './seg';
 
-export const SKILLS: Skill[] = ['Beginner', 'Intermediate', 'Advanced'];
-
-export interface ProfileDraft
-{
-  name: string; area: string; motivations: Motivation[];
+export interface ProfileDraft {
+  name: string; address: string; motivations: Motivation[];
   current: Record<string, Skill>; desired: string[]; calendar: BusyBlock[] | null;
 }
-export const blankDraft = (): ProfileDraft => ({ name: '', area: '', motivations: [], current: {}, desired: [], calendar: null });
+export const blankDraft = (): ProfileDraft => ({ name: '', address: '', motivations: [], current: {}, desired: [], calendar: null });
 export const draftFromUser = (u: User): ProfileDraft => ({
-  name: u.name, area: u.area, motivations: [...u.motivations],
+  name: u.name, address: u.address, motivations: [...u.motivations],
   current: Object.fromEntries(u.currentSports.map((s) => [s.sportId, s.skill])), desired: [...u.desiredSports],
   calendar: u.calendar ? u.calendar.map((b) => ({ ...b })) : null,
 });
-export const draftToProfile = (d: ProfileDraft): Omit<User, 'id' | 'avatarColor' | 'friendIds'> => ({
-  name: d.name.trim(), area: d.area, motivations: d.motivations,
-  currentSports: Object.entries(d.current).map(([sportId, skill]) => ({ sportId, skill })),
-  desiredSports: d.desired.filter((id) => !(id in d.current)), calendar: d.calendar,
-});
+/** Turns the draft into a profile; the address goes through the fake lookup to find area and map position. */
+export function draftToProfile(d: ProfileDraft): Omit<User, 'id' | 'avatarColor' | 'friendIds' | 'settings'> {
+  const g = geocode(d.address);
+  return {
+    name: d.name.trim(), address: d.address.trim(), area: g.area, lat: g.lat, lng: g.lng, motivations: d.motivations,
+    currentSports: Object.entries(d.current).map(([sportId, skill]) => ({ sportId, skill })),
+    desiredSports: d.desired.filter((id) => !(id in d.current)), calendar: d.calendar,
+  };
+}
 
-export function identityFields(d: ProfileDraft): HTMLElement
-{
+export function identityFields(d: ProfileDraft): HTMLElement {
   return h('div', { class: 'stack' },
     h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Your name'),
       h('input', { class: 'input', type: 'text', value: d.name, autocomplete: 'given-name', dataset: { key: 'name' }, onInput: (e: Event) => { d.name = (e.target as HTMLInputElement).value; } })),
-    h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Where do you usually play?'),
-      h('select', { class: 'select', value: d.area, dataset: { key: 'area' }, onChange: (e: Event) => { d.area = (e.target as HTMLSelectElement).value; } },
-        h('option', { value: '' }, 'Choose a neighbourhood'), areas.map((a) => h('option', { value: a }, a))),
-      h('span', { class: 'field__hint' }, 'Used to show games close to you.')));
+    h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Your address'),
+      h('input', { class: 'input', type: 'text', value: d.address, autocomplete: 'street-address', placeholder: 'e.g. 1250 Fairfield Rd, Victoria', dataset: { key: 'address' },
+        onInput: (e: Event) => { d.address = (e.target as HTMLInputElement).value; } }),
+      h('span', { class: 'field__hint' }, 'Shows games close to you. Prototype: it is only matched to a neighbourhood, never sent anywhere.')));
 }
 
-export function motivationField(d: ProfileDraft, redraw: () => void): HTMLElement
-{
+export function motivationField(d: ProfileDraft, redraw: () => void): HTMLElement {
   return h('fieldset', {}, h('legend', {}, 'What are you looking for? Pick any.'),
     h('div', { class: 'choice-grid' }, motivationOptions.map((m) => h('button', {
       type: 'button', class: 'choice', 'aria-pressed': d.motivations.includes(m.id), dataset: { key: `mot-${m.id}` },
@@ -43,32 +41,32 @@ export function motivationField(d: ProfileDraft, redraw: () => void): HTMLElemen
     }, h('strong', {}, m.label), h('small', {}, m.hint)))));
 }
 
-export function currentSportsField(d: ProfileDraft, redraw: () => void): HTMLElement
-{
-  const chosen = Object.keys(d.current);
-  return h('div', { class: 'stack' },
-    h('div', { class: 'choice-grid' }, sports.map((s) => h('button', {
-      type: 'button', class: 'choice', 'aria-pressed': s.id in d.current, dataset: { key: `cur-${s.id}` },
-      onClick: () => { if (s.id in d.current) delete d.current[s.id]; else { d.current[s.id] = 'Beginner'; d.desired = d.desired.filter((x) => x !== s.id); } redraw(); },
-    }, h('strong', {}, s.name), h('small', {}, s.tagline)))),
-    chosen.length ? h('div', {}, h('p', { class: 'field__label' }, 'Your skill level in each'),
-      chosen.map((id) => h('div', { class: 'skill-row' }, h('span', {}, sports.find((s) => s.id === id)!.name),
-        seg(`skill-${id}`, SKILLS.map((k) => ({ value: k, label: k })), d.current[id], (v) => { d.current[id] = v; redraw(); })))) : null);
+/** One list: each sport with its own skill levels. Pressing the chosen level again clears it. */
+export function sportsPlayField(d: ProfileDraft, redraw: () => void): HTMLElement {
+  return h('ul', { class: 'sport-list' }, sports.map((s) => h('li', { class: 'sport-row' },
+    h('div', { class: 'sport-row__name' }, h('strong', {}, s.name), h('small', {}, s.tagline)),
+    h('div', { class: 'seg', role: 'group', 'aria-label': `${s.name} skill level` }, SKILLS.map((k) => h('button', {
+      type: 'button', 'aria-pressed': d.current[s.id] === k, dataset: { key: `play-${s.id}-${k}` },
+      onClick: () => { if (d.current[s.id] === k) delete d.current[s.id]; else { d.current[s.id] = k; d.desired = d.desired.filter((x) => x !== s.id); } redraw(); },
+    }, k))))));
 }
 
-export function desiredSportsField(d: ProfileDraft, redraw: () => void): HTMLElement
-{
-  return h('div', { class: 'choice-grid' }, sports.filter((s) => !(s.id in d.current)).map((s) => h('button', {
-    type: 'button', class: 'choice', 'aria-pressed': d.desired.includes(s.id), dataset: { key: `want-${s.id}` },
-    onClick: () => { d.desired = d.desired.includes(s.id) ? d.desired.filter((x) => x !== s.id) : [...d.desired, s.id]; redraw(); },
-  }, h('strong', {}, s.name), h('small', {}, s.tagline))));
+/** Same list style, without skill levels. */
+export function sportsWantField(d: ProfileDraft, redraw: () => void): HTMLElement {
+  const rows = sports.filter((s) => !(s.id in d.current));
+  return h('ul', { class: 'sport-list' }, rows.map((s) => {
+    const on = d.desired.includes(s.id);
+    return h('li', { class: 'sport-row' },
+      h('div', { class: 'sport-row__name' }, h('strong', {}, s.name), h('small', {}, s.tagline)),
+      h('button', { type: 'button', class: 'btn btn--secondary btn--toggle', 'aria-pressed': on, dataset: { key: `want-${s.id}` },
+        onClick: () => { d.desired = on ? d.desired.filter((x) => x !== s.id) : [...d.desired, s.id]; redraw(); } }, on ? 'Added' : 'Add'));
+  }));
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const hr = (n: number) => (n === 12 ? '12 pm' : n > 12 ? `${n - 12} pm` : `${n} am`);
 
-export function calendarField(d: ProfileDraft, redraw: () => void): HTMLElement
-{
+export function calendarField(d: ProfileDraft, redraw: () => void): HTMLElement {
   const on = d.calendar !== null;
   const order = [1, 2, 3, 4, 5, 6, 0];
   const grid = on ? h('div', { class: 'calendar-grid', role: 'img', 'aria-label': 'Weekly calendar with busy times shaded' },
@@ -80,7 +78,6 @@ export function calendarField(d: ProfileDraft, redraw: () => void): HTMLElement
   return h('div', { class: 'stack' },
     h('label', { class: 'check' },
       h('input', { type: 'checkbox', checked: on, dataset: { key: 'cal' }, onChange: (e: Event) => { d.calendar = (e.target as HTMLInputElement).checked ? sampleCalendar.map((b) => ({ ...b })) : null; redraw(); } }),
-      h('span', { class: 'check__text' }, 'Sync my calendar', h('small', {}, 'Demo only: adds a made-up class and work schedule. We use it to suggest games when you are free.'))),
-    grid,
-    on ? h('ul', { class: 'stack-sm muted' }, d.calendar!.map((b) => h('li', {}, `${DAY_NAMES[b.day]} ${hr(b.startHour)} to ${hr(b.endHour)}: ${b.label}`))) : null);
+      h('span', { class: 'check__text' }, 'Sync my calendar', h('small', {}, 'Demo only: adds a made-up class and work schedule so we can suggest games when you are free.'))),
+    grid);
 }
