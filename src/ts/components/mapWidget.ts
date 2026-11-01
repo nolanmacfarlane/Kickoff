@@ -2,12 +2,12 @@
 // Pins are HTML buttons placed by Leaflet, so they keep their look and keyboard access.
 import * as L from 'leaflet';
 import { h } from '../dom';
+import { sportIcon } from './sportBits';
 import { ATTRIBUTION, TILE_OPTIONS, TILES } from './tiles';
 import type { LatLng } from '../types';
 
-export interface MapPin { id: string; lat: number; lng: number; label: string; glyph?: string; count?: number; variant?: 'friends' | 'match' | 'venue' | 'draft' }
-export interface MapOptions
-{
+export interface MapPin { id: string; lat: number; lng: number; label: string; glyph?: string; iconSport?: string; count?: number; variant?: 'friends' | 'match' | 'venue' | 'draft' }
+export interface MapOptions {
   key: string;                       // slot name; a previous map with the same key is destroyed
   pins: MapPin[];
   selectedId?: string | null;
@@ -20,8 +20,7 @@ export interface MapOptions
   onPick?: (lat: number, lng: number) => void;
   className?: string;
 }
-export interface MapHandle
-{
+export interface MapHandle {
   el: HTMLElement; map: L.Map;
   setPins: (pins: MapPin[], selectedId?: string | null) => void;
   focus: (id: string, bounce?: boolean) => void;    // centre on a pin and make it bounce
@@ -33,8 +32,7 @@ const live = new Map<string, L.Map>();
 const saved = new Map<string, { c: L.LatLng; z: number }>();
 export function destroyMaps(): void { live.forEach((m) => m.remove()); live.clear(); }
 
-export function mapWidget(o: MapOptions): MapHandle
-{
+export function mapWidget(o: MapOptions): MapHandle {
   live.get(o.key)?.remove();
   const interactive = o.interactive !== false;
   const el = h('div', { class: `map ${o.onPick ? 'map--pick' : ''} ${o.className ?? ''}`.trim() });
@@ -51,8 +49,7 @@ export function mapWidget(o: MapOptions): MapHandle
   const restored = o.remember ? saved.get(o.key) : undefined;
   const start = o.center ?? o.user ?? VICTORIA;
   map.setView(restored?.c ?? [start.lat, start.lng], restored?.z ?? o.zoom ?? 13, { animate: false });
-  const fit = () =>
-  {
+  const fit = () => {
     if (!o.fitTo?.length) return;
     map.fitBounds(L.latLngBounds(o.fitTo.map((p) => [p.lat, p.lng] as L.LatLngTuple)), { padding: [32, 32], maxZoom: o.maxZoom ?? 15, animate: false });
   };
@@ -60,8 +57,7 @@ export function mapWidget(o: MapOptions): MapHandle
   if (interactive) L.control.zoom({ position: 'bottomleft' }).addTo(map);
   if (o.remember) map.on('moveend', () => saved.set(o.key, { c: map.getCenter(), z: map.getZoom() }));
 
-  if (o.user)
-  {   // "you are here": a blue dot with a soft halo (plain HTML, so it works everywhere)
+  if (o.user) {   // "you are here": a blue dot with a soft halo (plain HTML, so it works everywhere)
     const you = h('div', { class: 'you-are-here', 'aria-hidden': 'true' }, h('span', { class: 'you-are-here__halo' }), h('span', { class: 'you-are-here__dot' }));
     L.marker([o.user.lat, o.user.lng], {
       icon: L.divIcon({ className: 'pin-host', html: you as unknown as string, iconSize: [0, 0], iconAnchor: [0, 0] }),
@@ -74,11 +70,9 @@ export function mapWidget(o: MapOptions): MapHandle
   let sized = typeof ResizeObserver === 'undefined';
   const whenSized: (() => void)[] = [];
   const onSized = (fn: () => void) => { if (sized) fn(); else whenSized.push(fn); };
-  if (typeof ResizeObserver !== 'undefined')
-  {
+  if (typeof ResizeObserver !== 'undefined') {
     let first = true;
-    const ro = new ResizeObserver(() =>
-    {
+    const ro = new ResizeObserver(() => {
       if (!el.clientWidth || !el.clientHeight) return;
       map.invalidateSize();
       if (first) { first = false; if (!restored) fit(); sized = true; whenSized.splice(0).forEach((fn) => fn()); }
@@ -89,17 +83,15 @@ export function mapWidget(o: MapOptions): MapHandle
 
   const layer = L.layerGroup().addTo(map);
   const markers = new Map<string, L.Marker>();
-  function setPins(pins: MapPin[], selectedId: string | null = null): void
-  {
+  function setPins(pins: MapPin[], selectedId: string | null = null): void {
     const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.key;
     layer.clearLayers(); markers.clear();
-    for (const p of pins)
-    {
+    for (const p of pins) {
       const selected = p.id === selectedId;
       const btn = h('button', {
         type: 'button', class: ['pin', p.variant ? `pin--${p.variant}` : '', (p.count ?? 1) > 1 ? 'pin--group' : '', selected ? 'pin--selected' : ''].join(' ').trim(),
         'aria-label': p.label, 'aria-pressed': selected, title: p.label, tabindex: o.onSelect ? 0 : -1, dataset: { key: `pin-${p.id}` },
-      }, p.glyph ?? '');
+      }, p.iconSport ? sportIcon(p.iconSport, 'pin__icon') : (p.glyph ?? ''));
       const marker = L.marker([p.lat, p.lng], {
         icon: L.divIcon({ className: 'pin-host', html: btn as unknown as string, iconSize: [0, 0], iconAnchor: [0, 0] }),
         keyboard: false, interactive: !!o.onSelect, zIndexOffset: selected ? 1000 : p.variant === 'venue' ? -500 : 0,
@@ -110,10 +102,8 @@ export function mapWidget(o: MapOptions): MapHandle
     }
     if (focusKey) (el.querySelector(`[data-key="${focusKey}"]`) as HTMLElement | null)?.focus();
   }
-  function focus(id: string, bounce = true): void
-  {
-    onSized(() =>
-    {
+  function focus(id: string, bounce = true): void {
+    onSized(() => {
       const m = markers.get(id);
       if (!m) return;
       const target = m.getLatLng();
@@ -122,8 +112,7 @@ export function mapWidget(o: MapOptions): MapHandle
       if (map.getSize().x > 0 && map.getSize().y > 0) map.flyTo(target, zoom, { duration: 0.7 });
       else map.setView(target, zoom, { animate: false });
       if (!bounce) return;
-      setTimeout(() =>
-      {
+      setTimeout(() => {
         const pin = m.getElement()?.querySelector('.pin');
         if (!pin) return;
         pin.classList.remove('pin--bounce');

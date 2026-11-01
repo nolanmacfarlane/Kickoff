@@ -1,7 +1,8 @@
-// Onboarding wizard: 4 short steps with a slide between them. "Skip with demo user" is on every step.
-import { blankDraft, calendarField, draftToProfile, identityFields, motivationField, sportsPlayField, sportsWantField, type ProfileDraft } from '../components/profileFields';
+// Onboarding wizard: 3 short steps with a slide between them. "Skip with demo user" is on every step.
+import { blankDraft, calendarField, draftToProfile, identityFields, motivationField, sportsField, type ProfileDraft } from '../components/profileFields';
 import { firstName, go, h, keepFocus, toast } from '../dom';
 import { completeOnboarding, loginDemo } from '../state';
+import { openSportInfo } from './sportInfo';
 
 export function render(): HTMLElement {
   const d: ProfileDraft = blankDraft();
@@ -9,19 +10,17 @@ export function render(): HTMLElement {
   let error = '';
   let dir: 'forward' | 'back' | null = null;   // set only when the step changes, so edits do not re-animate
   const root = h('div', { class: 'onboarding' });
-  const LAST = 3;
+  const LAST = 2;
 
   const titles = [
     ['Welcome to Kickoff', 'Tell us a little about you and we will suggest games that fit. It takes about a minute.'],
-    ['What do you play?', 'Choose your level for each sport you play. Leave the rest empty.'],
-    ['What do you want to try?', 'We will show you games for these, including ones that share gear.'],
+    ['Your sports', 'Search for a sport, then choose your level, or mark it as one you want to try.'],
     ['Add your schedule', 'Optional. Connect a calendar so suggestions match when you are free.'],
   ];
 
   function body(): HTMLElement {
     if (step === 0) return h('div', { class: 'stack' }, identityFields(d), motivationField(d, draw));
-    if (step === 1) return sportsPlayField(d, draw);
-    if (step === 2) return sportsWantField(d, draw);
+    if (step === 1) return sportsField(d, draw, openSportInfo);
     return calendarField(d, draw);
   }
 

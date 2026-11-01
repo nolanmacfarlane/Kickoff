@@ -2,11 +2,12 @@
 import { distanceFrom, inviteTags } from '../components/inviteCard';
 import { seg, segMulti } from '../components/seg';
 import { SKILLS } from '../data';
-import { avatar, closeModal, fmtWhen, h, iconButton, openModal, tag, toast } from '../dom';
+import { sportLabel, uiIcon } from '../components/sportBits';
+import { avatar, closeModal, fmtWhen, go, h, openModal, tag, toast } from '../dom';
 import { matchInvite } from '../match';
 import {
   acceptFriendRequest, acceptInvite, canSee, currentUser, editInviteTags, friendStatus, getInvite, getSport, getUser, getVenue,
-  isFull, isPast, leaveInvite, markInviteRead, requestFrom, sendFriendRequest, spotsLeft, tagsLocked, unreadCount,
+  isFull, isPast, leaveInvite, markInviteRead, meetupChatId, requestFrom, sendFriendRequest, spotsLeft, tagsLocked, unreadCount,
 } from '../state';
 import type { Skill, Vibe, Visibility } from '../types';
 import { openSportInfo } from './sportInfo';
@@ -67,10 +68,11 @@ function view(id: string): HTMLElement | null {
   });
 
   let actions: HTMLElement;
-  if (past) actions = h('p', { class: 'notice' }, 'This meetup has already happened.');
+  if (past) actions = h('div', { class: 'stack-sm' }, h('p', { class: 'notice' }, 'This meetup has already happened.'),
+    isMember ? h('div', { class: 'detail__actions' }, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'View chat')) : null);
   else if (isMember) {
     const cancel = isHost && inv.memberIds.length === 1;
-    actions = h('div', { class: 'detail__actions' }, h('button', { class: 'btn btn--danger', type: 'button',
+    actions = h('div', { class: 'detail__actions' }, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'Group chat'), h('button', { class: 'btn btn--danger', type: 'button',
       onClick: () => { run(leaveInvite(inv.id), cancel ? 'Invite cancelled.' : 'You left the meetup.'); closeModal(); } }, cancel ? 'Cancel invite' : 'Leave'));
   } else {
     const blocked = isFull(inv) || !canSee(inv, me.id);
@@ -80,10 +82,9 @@ function view(id: string): HTMLElement | null {
 
   return h('div', { class: 'detail' },
     h('div', { class: 'detail__head' }, h('div', { class: 'grow' },
-      h('div', { class: 'row' }, h('h2', {}, sport.name), iconButton('help', `About ${sport.name}: gear and where to borrow`, () => openSportInfo(sport.id), 'icon-btn--sm')),
+      sportLabel(sport.id, { as: 'h2', onAbout: () => openSportInfo(sport.id) }),
       h('p', { class: 'detail__when' }, fmtWhen(inv.start, inv.end)), h('p', { class: 'card__meta' }, inv.recurring ? 'Repeats weekly' : 'One time'))),
     tagsBlock,
-    !isMember && m.why ? h('p', { class: 'card__why' }, `Why this fits you: ${m.why}`) : null,
     inv.gear.available ? h('div', { class: 'gear-box' }, `Gear to share: ${inv.gear.description}`) : null,
     h('section', {}, h('h3', {}, 'Where'), place),
     inv.notes ? h('section', {}, h('h3', {}, 'Notes from the host'), h('p', {}, inv.notes)) : null,

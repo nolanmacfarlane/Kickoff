@@ -1,13 +1,14 @@
 // Profile tab: menu on the left (as in the sketch), section on the right. All onboarding answers are edited in "Your profile".
 import { inviteCard } from '../components/inviteCard';
 import {
-  calendarField, draftFromUser, draftToProfile, identityFields, motivationField, sportsPlayField, sportsWantField, type ProfileDraft,
+  calendarField, draftFromUser, draftToProfile, identityFields, motivationField, sportsField, type ProfileDraft,
 } from '../components/profileFields';
 import { seg } from '../components/seg';
 import { avatar, confirmDialog, fmtAgo, go, h, keepFocus, toast } from '../dom';
 import { setGuard } from '../nav';
 import { activityFor, currentUser, logout, myPast, myUpcoming, updateProfile, updateSettings } from '../state';
 import { openInvite } from './inviteDetail';
+import { openSportInfo } from './sportInfo';
 
 const SECTIONS: [string, string][] = [['profile', 'Your profile'], ['activity', 'Activity'], ['personalization', 'Personalization'], ['help', 'Help'], ['about', 'About us']];
 
@@ -38,8 +39,7 @@ function profileEditor(): HTMLElement {
   function draw(): void {
     keepFocus(() => root.replaceChildren(h('div', { class: 'stack' },
       h('section', { class: 'card stack' }, h('h2', {}, 'About you'), identityFields(d), motivationField(d, draw)),
-      h('section', { class: 'card stack' }, h('h2', {}, 'Sports you play'), sportsPlayField(d, draw)),
-      h('section', { class: 'card stack' }, h('h2', {}, 'Sports you want to try'), sportsWantField(d, draw)),
+      h('section', { class: 'card stack' }, h('h2', {}, 'Sports'), sportsField(d, draw, openSportInfo)),
       h('section', { class: 'card stack' }, h('h2', {}, 'Schedule'), calendarField(d, draw)),
       error ? h('p', { class: 'notice notice--error', role: 'alert' }, error) : null,
       h('div', {}, h('button', { class: 'btn btn--primary', type: 'button', onClick: save }, 'Save changes')))));
@@ -51,7 +51,7 @@ function profileEditor(): HTMLElement {
 function personalization(): HTMLElement {
   const me = currentUser()!;
   const s = me.settings;
-  const toggle = (key: 'joins' | 'leaves' | 'friends', label: string, hint: string) =>
+  const toggle = (key: 'joins' | 'leaves' | 'friends' | 'messages', label: string, hint: string) =>
     h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: s.notify[key], dataset: { key: `notify-${key}` }, onChange: (e: Event) => { updateSettings({ notify: { [key]: (e.target as HTMLInputElement).checked } }); } }),
       h('span', { class: 'check__text' }, label, h('small', {}, hint)));
   return h('div', { class: 'stack' },
@@ -64,12 +64,14 @@ function personalization(): HTMLElement {
     h('section', { class: 'card stack' }, h('h2', {}, 'Notifications'),
       toggle('joins', 'Someone joins my meetup', 'Includes when a meetup fills up.'),
       toggle('leaves', 'Someone leaves my meetup', 'Changes apply straight away.'),
-      toggle('friends', 'Friend requests', 'New requests and when yours is accepted.')));
+      toggle('friends', 'Friend requests', 'New requests and when yours is accepted.'),
+      toggle('messages', 'New messages', 'Counts unread chats in the Social tab badge.')));
 }
 
 const FAQS: [string, string][] = [
   ['How do I find a game?', 'Open Home or Map. Games that match your sports, skill level and schedule have yellow tags and a line explaining why.'],
   ['How do I start my own game?', 'Use Create invite. Sport, place, time, number of people and at least one skill level are required. Everything else is optional.'],
+  ['What do the pin colours mean?', 'Yellow pins match your profile (your sports and level). Dark pins are other invites, and teal pins are friends-only invites. A number means several invites at the same place. Click it to see them all.'],
   ['I do not own any gear. Can I still play?', 'Yes. Look for the green "Gear shared" tag, or tap the (?) next to a sport name to see what you need and where to borrow it.'],
   ['What does "Friends only" mean?', 'Only the host\'s friends can see and join the invite on the map. Everyone else will not see it.'],
   ['How do I add a friend?', 'Open an invite, find someone in the list of who is going, and tap Add friend. They need to accept before you are friends. You do not have to be part of the invite.'],
@@ -94,10 +96,11 @@ export function render(args: string[]): HTMLElement {
   else if (section === 'activity') {
     const up = myUpcoming(me.id), past = myPast(me.id), log = activityFor(me.id);
     content = h('div', { class: 'stack' },
-      h('section', {}, h('h2', {}, 'Upcoming'), up.length ? h('div', { class: 'rec-list' }, up.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id) }))) : h('p', { class: 'muted' }, 'Nothing planned.')),
-      h('section', {}, h('h2', {}, 'Past meetups'), past.length ? h('div', { class: 'rec-list' }, past.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id) }))) : h('p', { class: 'muted' }, 'No past meetups yet.')),
+      h('section', {}, h('h2', {}, 'Upcoming'), up.length ? h('div', { class: 'rec-list' }, up.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('p', { class: 'muted' }, 'Nothing planned.')),
+      h('section', {}, h('h2', {}, 'Past meetups'), past.length ? h('div', { class: 'rec-list' }, past.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('p', { class: 'muted' }, 'No past meetups yet.')),
       h('section', {}, h('h2', {}, 'History'), log.length ? h('ul', { class: 'card activity-list' }, log.map((a) => h('li', {}, h('span', {}, a.text), h('time', {}, fmtAgo(a.at))))) : h('p', { class: 'muted' }, 'No activity yet.')));
-  } else content = h('div', { class: 'card stack' }, h('h2', {}, 'About us'), h('p', {}, 'Kickoff helps people play sports together on short notice, or plan ahead. This is a course prototype with made-up data.'));
+  } else content = h('div', { class: 'card stack' }, h('h2', {}, 'About us'), h('p', {}, 'Kickoff helps people play sports together on short notice, or plan ahead. This is a course prototype with made-up data.'),
+    h('p', { class: 'muted' }, 'Sport icons by Phosphor Icons (MIT licence). Map data from OpenStreetMap contributors, map tiles by CARTO, map library Leaflet.'));
 
   const askLogout = () => confirmDialog({
     title: 'Log out?', body: 'You will go back to the welcome screen.',

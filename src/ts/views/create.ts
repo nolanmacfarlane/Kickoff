@@ -1,10 +1,11 @@
 // Create invite. Required: sport, location, capacity, time, at least one skill level. Everything else is optional.
 import { mapWidget, type MapPin } from '../components/mapWidget';
+import { uiIcon } from '../components/sportBits';
 import { seg, segMulti } from '../components/seg';
 import { SKILLS, sports, venues } from '../data';
-import { append, go, h, keepFocus, toast } from '../dom';
+import { append, go, h, iconButton, keepFocus, toast } from '../dom';
 import { createInvite, currentUser, getSport, getVenue, MAX_CAPACITY, MIN_CAPACITY } from '../state';
-import type { InviteLocation, Skill, Vibe, Visibility } from '../types';
+import type { InviteLocation, Skill, Venue, Vibe, Visibility } from '../types';
 import { openSportInfo } from './sportInfo';
 
 interface Form {
@@ -61,20 +62,40 @@ export function render(): HTMLElement {
     go(`#/map/${res.id}`);
   }
 
+  // Venue search sits under the map. The input and results are created once so typing never loses focus.
+  let query = '';
+  const results = h('div', { class: 'venue-results' });
+  const searchInput = h('input', { class: 'input', type: 'search', placeholder: 'Search venues, areas or sports', 'aria-label': 'Search venues', dataset: { key: 'venue-search' },
+    onInput: (e: Event) => { query = (e.target as HTMLInputElement).value; fillResults(); } });
+
+  function pick(v: Venue): void {
+    f.location = { label: v.name, lat: v.lat, lng: v.lng, venueId: v.id };
+    handle.map.setView([v.lat, v.lng], Math.max(handle.map.getZoom(), 15));
+    draw();
+  }
+  function fillResults(): void {
+    const q = query.trim().toLowerCase();
+    results.replaceChildren();
+    if (!q) return;
+    const matches = venues.filter((v) => [v.name, v.area, v.kind, ...v.sportIds.map((id) => getSport(id)?.name ?? '')].some((t) => t.toLowerCase().includes(q)));
+    append(results, [matches.length
+      ? h('div', { class: 'venue-list' }, matches.map((v) => h('button', { type: 'button', class: 'venue-option', 'aria-pressed': f.location?.venueId === v.id, onClick: () => pick(v) },
+          h('strong', {}, v.name), h('small', {}, `${v.area}, ${v.sportIds.map((id) => getSport(id)!.name).join(', ')}`))))
+      : h('p', { class: 'muted' }, 'No venues match. Click the map to drop your own pin.')]);
+  }
+
   function where(): HTMLElement {
-    const sorted = [...venues].sort((a, b) => Number(b.sportIds.includes(f.sportId)) - Number(a.sportIds.includes(f.sportId)));
     const venue = f.location?.venueId ? getVenue(f.location.venueId) : undefined;
     const pins: MapPin[] = venues.map((v) => ({ id: `v:${v.id}`, lat: v.lat, lng: v.lng, label: v.name, variant: 'venue' }));
     if (f.location && !f.location.venueId) pins.push({ id: 'draft', lat: f.location.lat, lng: f.location.lng, label: 'Your pin', variant: 'draft' });
     handle.setPins(pins, f.location?.venueId ? `v:${f.location.venueId}` : f.location ? 'draft' : null);
+    fillResults();
     return h('section', { class: 'card sticky-col', 'aria-labelledby': 'where-h' },
       h('h2', { id: 'where-h' }, 'Where'),
-      h('div', { class: 'venue-list' }, sorted.map((v) => h('button', {
-        type: 'button', class: 'venue-option', 'aria-pressed': f.location?.venueId === v.id, dataset: { key: `venue-${v.id}` },
-        onClick: () => { f.location = { label: v.name, lat: v.lat, lng: v.lng, venueId: v.id }; draw(); handle.map.panTo([v.lat, v.lng]); },
-      }, h('strong', {}, v.name), h('small', {}, `${v.area}${v.sportIds.includes(f.sportId) ? ', good for ' + getSport(f.sportId)!.name : ''}`)))),
-      h('p', { class: 'field__hint' }, 'Pick a venue above or on the map, or click anywhere on the map to drop your own pin.'),
       handle.el,
+      h('label', { class: 'search-field' }, h('span', { class: 'sr-only' }, 'Search venues'), uiIcon('search'), searchInput),
+      results,
+      h('p', { class: 'field__hint' }, 'Search for a venue, click a pin, or click anywhere on the map to drop your own pin.'),
       f.location && !f.location.venueId ? h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Name this spot (optional)'),
         h('input', { class: 'input', type: 'text', value: f.spotName, placeholder: 'e.g. Field behind the library', dataset: { key: 'spot' },
           onInput: (e: Event) => { f.spotName = (e.target as HTMLInputElement).value; f.location!.label = f.spotName.trim() || 'Custom pin'; } })) : null,
@@ -90,14 +111,15 @@ export function render(): HTMLElement {
   function draw(scrollToError = false): void {
     keepFocus(() => { root.replaceChildren(); append(root, [
       error ? h('p', { class: 'notice notice--error form-error', role: 'alert', id: 'form-error' }, error) : null,
-      h('div', { class: 'cols' },
+      h('div', { class: 'cols cols--create' },
         h('div', { class: 'create-form' },
           h('section', { class: 'card' }, h('h2', {}, 'What and when'),
             h('div', { class: 'field' },
               h('label', { class: 'field__label', for: 'sport-select' }, 'Sport'),
-              h('select', { class: 'select', id: 'sport-select', value: f.sportId, dataset: { key: 'sport' }, onChange: (e: Event) => { f.sportId = (e.target as HTMLSelectElement).value; draw(); } },
-                sports.map((s) => h('option', { value: s.id }, s.name))),
-              h('button', { class: 'btn btn--text link-btn', type: 'button', onClick: () => openSportInfo(f.sportId) }, `About ${getSport(f.sportId)!.name}: gear and where to borrow`)),
+              h('div', { class: 'input-row' },
+                h('select', { class: 'select', id: 'sport-select', value: f.sportId, dataset: { key: 'sport' }, onChange: (e: Event) => { f.sportId = (e.target as HTMLSelectElement).value; draw(); } },
+                  sports.map((s) => h('option', { value: s.id }, s.name))),
+                iconButton('help', `About ${getSport(f.sportId)!.name}`, () => openSportInfo(f.sportId), 'icon-btn--tight'))),
             h('div', { class: 'field-row' },
               h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Date'), h('input', { class: 'input', type: 'date', value: f.date, min: dateStr(new Date()), dataset: { key: 'date' }, onChange: (e: Event) => { f.date = (e.target as HTMLInputElement).value; } })),
               h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Starts'), h('input', { class: 'input', type: 'time', value: f.start, dataset: { key: 'start' }, onChange: (e: Event) => { f.start = (e.target as HTMLInputElement).value; } })),

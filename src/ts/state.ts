@@ -1,8 +1,8 @@
 // The single source of truth. Views READ via selectors and CHANGE data only via actions.
 // All invite rules (full = hidden, host handover, tag locking, friends-only, friend requests) live here.
-import { seedInvites, seedUsers, sports, venues } from './data';
+import { defaultSettings, seedInvites, seedUsers, sports, venues } from './data';
 import type {
-  ActivityItem, AppState, FriendRequest, FriendStatus, Invite, NewInviteInput, Notification, NotificationKind,
+  ActivityItem, AppState, ChatSummary, FriendRequest, FriendStatus, Invite, Message, NewInviteInput, Notification, NotificationKind,
   Result, SettingsPatch, TagEdit, User,
 } from './types';
 
@@ -19,7 +19,7 @@ export const MAX_CAPACITY = 30;
 // ---------- lifecycle ----------
 
 export function initState(now = Date.now()): void {
-  st = { currentUserId: null, users: seedUsers(), invites: seedInvites(now), notifications: [], activity: [], friendRequests: [] };
+  st = { currentUserId: null, users: seedUsers(), invites: seedInvites(now), notifications: [], activity: [], friendRequests: [], messages: [], chatReads: {} };
   // a little history for the demo user so badges, requests and Recent Activity are not empty
   notify('u-demo', 'i-11', 'Maya joined your Soccer meetup', now - 2 * 3_600_000, 'join');
   notify('u-demo', 'i-11', 'Chen joined your Soccer meetup', now - 1 * 3_600_000, 'join');
@@ -27,6 +27,18 @@ export function initState(now = Date.now()): void {
   st.friendRequests.push({ id: nid('fr'), fromId: 'u-priya', toId: 'u-demo', createdAt: now - 3 * 3_600_000 });
   notify('u-demo', null, 'Priya sent you a friend request', now - 3 * 3_600_000, 'friend');
   st.friendRequests.push({ id: nid('fr'), fromId: 'u-demo', toId: 'u-chen', createdAt: now - 5 * 3_600_000 });
+  // seeded chats: Maya and Tom (friends) and the group chat for Alex's own meetup
+  const M = 60_000, H = 3_600_000;
+  const maya = directChatId('u-demo', 'u-maya'), tom = directChatId('u-demo', 'u-tom'), group = meetupChatId('i-11');
+  addMessage(maya, 'u-maya', 'Are you coming Thursday?', now - 5 * H);
+  addMessage(maya, 'u-demo', 'Yes, I can bring a ball.', now - 4.5 * H);
+  addMessage(maya, 'u-maya', 'Great, see you there!', now - 40 * M);
+  addMessage(tom, 'u-tom', 'Cages on Friday? I have a spare glove if you want to try.', now - 26 * H);
+  addMessage(group, null, 'Maya joined', now - 2 * H);
+  addMessage(group, 'u-maya', 'I can bring cones.', now - 100 * M);
+  addMessage(group, null, 'Chen joined', now - 1 * H);
+  addMessage(group, 'u-chen', 'See you at 6!', now - 30 * M);
+  st.chatReads['u-demo'] = { [maya]: now - 4 * H, [group]: now - 3 * H };   // later messages are unread
   emit();
 }
 
@@ -164,7 +176,7 @@ export function completeOnboarding(profile: Omit<User, 'id' | 'avatarColor' | 'f
   const colors = ['#e07a5f', '#3d85c6', '#81b29a', '#9b72cf', '#4aa3a2'];
   st.users[id] = {
     ...profile, id, avatarColor: colors[counter % colors.length], friendIds: [], // new users start with no friends
-    settings: { theme: 'light', units: 'km', notify: { joins: true, leaves: true, friends: true } },
+    settings: defaultSettings(),
   };
   st.currentUserId = id;
   emit();
@@ -221,6 +233,7 @@ export function acceptInvite(inviteId: string, now = Date.now()): Result {
   inv.memberIds.filter((id) => id !== me.id).forEach((id) => notify(id, inv.id, `${me.name} joined your ${sport} meetup`, now, 'join'));
   if (isFull(inv)) inv.memberIds.forEach((id) => notify(id, inv.id, `Your ${sport} meetup is now full`, now, 'join'));
   log(me.id, `You joined ${sport} at ${inv.location.label}`, now, inv.id);
+  addMessage(meetupChatId(inv.id), null, `${me.name} joined`, now);
   emit();
   return ok(inv.id);
 }
@@ -235,10 +248,13 @@ export function leaveInvite(inviteId: string, now = Date.now()): Result {
   inv.memberIds = inv.memberIds.filter((id) => id !== me.id);
   log(me.id, `You left ${sport} at ${inv.location.label}`, now, inv.id);
   if (inv.memberIds.length === 0) {
-    st.invites = st.invites.filter((i) => i.id !== inv.id); // nobody left: delete
+    st.invites = st.invites.filter((i) => i.id !== inv.id); // nobody left: delete the invite and its chat
+    st.messages = st.messages.filter((m) => m.chatId !== meetupChatId(inv.id));
   } else {
+    addMessage(meetupChatId(inv.id), null, `${me.name} left`, now);
     if (wasHost) {
       inv.hostId = inv.memberIds[0]; // next member (earliest joiner) becomes host
+      addMessage(meetupChatId(inv.id), null, `${getUser(inv.hostId)!.name} is now the host`, now);
       notify(inv.hostId, inv.id, `${me.name} left. You are now the host of ${sport}`, now, 'other');
     }
     inv.memberIds.filter((id) => id !== inv.hostId || !wasHost).forEach((id) => notify(id, inv.id, `${me.name} left your ${sport} meetup`, now, 'leave'));
@@ -258,6 +274,94 @@ export function editInviteTags(inviteId: string, edit: TagEdit): Result {
   Object.assign(inv, edit);
   emit();
   return ok();
+}
+
+// ---------- chats ----------
+
+export const directChatId = (a: string, b: string): string => `dm:${[a, b].sort().join(':')}`;
+export const meetupChatId = (inviteId: string): string => `meetup:${inviteId}`;
+
+function addMessage(chatId: string, senderId: string | null, text: string, at = Date.now()): Message {
+  const m: Message = { id: nid('m'), chatId, senderId, text, at };
+  st.messages.push(m);
+  return m;
+}
+
+/** What this user may do in a chat, or null if they have no access. Direct chats need friends; meetup chats need membership. */
+function chatAccess(chatId: string, userId: string): { kind: 'direct' | 'meetup'; inviteId?: string; friendId?: string; readOnly: boolean } | null {
+  const me = st.users[userId];
+  if (!me) return null;
+  if (chatId.startsWith('dm:')) {
+    const ids = chatId.slice(3).split(':');
+    const friendId = ids.find((id) => id !== userId);
+    if (ids.length !== 2 || !ids.includes(userId) || !friendId || !me.friendIds.includes(friendId)) return null;
+    return { kind: 'direct', friendId, readOnly: false };
+  }
+  if (chatId.startsWith('meetup:')) {
+    const inv = getInvite(chatId.slice(7));
+    if (!inv || !inv.memberIds.includes(userId)) return null;
+    return { kind: 'meetup', inviteId: inv.id, readOnly: isPast(inv) };
+  }
+  return null;
+}
+
+export const messagesIn = (chatId: string): Message[] => st.messages.filter((m) => m.chatId === chatId).sort((a, b) => a.at - b.at);
+const chatUnread = (userId: string, chatId: string): number => {
+  const readAt = st.chatReads[userId]?.[chatId] ?? 0;
+  return st.messages.filter((m) => m.chatId === chatId && m.senderId !== null && m.senderId !== userId && m.at > readAt).length;
+};
+
+/** Every friend (so you can start a chat) and every meetup you are in (or were in, if it has messages). Newest first. */
+export function chatSummaries(userId: string, now = Date.now()): ChatSummary[] {
+  const me = st.users[userId];
+  if (!me) return [];
+  const ids = [
+    ...me.friendIds.map((f) => directChatId(userId, f)),
+    ...st.invites.filter((i) => i.memberIds.includes(userId) && (!isPast(i, now) || messagesIn(meetupChatId(i.id)).length)).map((i) => meetupChatId(i.id)),
+  ];
+  return ids.flatMap((id) => {
+    const access = chatAccess(id, userId);
+    if (!access) return [];
+    const msgs = messagesIn(id);
+    return [{ id, ...access, last: msgs[msgs.length - 1], unread: chatUnread(userId, id) }];
+  }).sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));
+}
+export const unreadMessages = (userId: string): number => chatSummaries(userId).reduce((n, c) => n + c.unread, 0);
+
+export function sendMessage(chatId: string, text: string, now = Date.now()): Result {
+  const me = currentUser();
+  if (!me) return fail('Not signed in.');
+  const access = chatAccess(chatId, me.id);
+  if (!access) return fail('You cannot message here.');
+  if (access.readOnly) return fail('This meetup has ended, so its chat is read only.');
+  const clean = text.trim();
+  if (!clean) return fail('Type a message first.');
+  if (clean.length > 500) return fail('Messages can be up to 500 characters.');
+  addMessage(chatId, me.id, clean, now);
+  st.chatReads[me.id] = { ...st.chatReads[me.id], [chatId]: now };   // your own message means you have read the chat
+  emit();
+  return ok();
+}
+
+/** Marks everything in the chat as read. Does nothing (and does not re-render) if there is nothing unread. */
+export function markChatRead(chatId: string, now = Date.now()): void {
+  const me = currentUser();
+  if (!me || !chatAccess(chatId, me.id) || chatUnread(me.id, chatId) === 0) return;
+  st.chatReads[me.id] = { ...st.chatReads[me.id], [chatId]: now };
+  emit();
+}
+
+// ---------- friends' plans ----------
+
+/** Upcoming invites you can see, are not in yet, and at least one friend is going to. Soonest first. */
+export function friendsPlans(userId: string, now = Date.now()): { invite: Invite; friends: User[] }[] {
+  const me = st.users[userId];
+  if (!me) return [];
+  return st.invites
+    .filter((i) => !isPast(i, now) && canSee(i, userId) && !i.memberIds.includes(userId))
+    .map((invite) => ({ invite, friends: invite.memberIds.filter((id) => me.friendIds.includes(id)).map((id) => st.users[id]) }))
+    .filter((p) => p.friends.length > 0)
+    .sort((a, b) => a.invite.start - b.invite.start);
 }
 
 export function markInviteRead(inviteId: string): void {

@@ -36,3 +36,10 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 legend { padding: 0; font-weight: 600; font-size: var(--text-sm); margin-bottom: var(--s-2); }
 
 .input--narrow { width: 7rem; }
+
+.input-row { display: flex; align-items: center; gap: var(--s-1); }
+.input-row .select { flex: 1; }
+.select-help { display: inline-flex; align-items: center; gap: var(--s-1); }
+.search-field { position: relative; display: block; }
+.search-field > svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--ink-3); pointer-events: none; }
+.search-field .input { padding-left: 40px; }

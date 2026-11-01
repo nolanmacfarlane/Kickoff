@@ -1,104 +1,32 @@
 /* Home: greeting, recommended invites, mini map, recent activity.
    Class vocabulary: .greeting .rec-list .rec-card .mini-map .mini-map__link .activity-list */
-.greeting h1 {
-   font-size: var(--text-3xl);
-}
+.greeting h1 { font-size: var(--text-3xl); }
+.greeting p { margin-top: var(--s-2); color: var(--ink-2); font-size: var(--text-lg); }
+.greeting { margin-bottom: var(--s-6); }
 
-.greeting p {
-   margin-top: var(--s-2);
-   color: var(--ink-2);
-   font-size: var(--text-lg);
-}
+.rec-list { display: grid; gap: var(--s-3); }
+.rec-card { display: grid; gap: var(--s-3); }
+.rec-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3); }
+.rec-card__when { font-weight: 600; }
+.rec-card__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.rec-card__spots { font-size: var(--text-sm); color: var(--ink-2); }
 
-.greeting {
-   margin-bottom: var(--s-6);
-}
+.activity-list { display: grid; }
+.activity-list li { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) 0; border-bottom: 1px solid var(--line); font-size: var(--text-sm); }
+.activity-list li:last-child { border-bottom: 0; }
+.activity-list time { color: var(--ink-3); white-space: nowrap; }
 
-.rec-list {
-   display: grid;
-   gap: var(--s-3);
-}
-
-.rec-card {
-   display: grid;
-   gap: var(--s-3);
-}
-
-.rec-card__top {
-   display: flex;
-   align-items: flex-start;
-   justify-content: space-between;
-   gap: var(--s-3);
-}
-
-.rec-card__when {
-   font-weight: 600;
-}
-
-.rec-card__foot {
-   display: flex;
-   align-items: center;
-   justify-content: space-between;
-   gap: var(--s-3);
-}
-
-.rec-card__spots {
-   font-size: var(--text-sm);
-   color: var(--ink-2);
-}
-
-.activity-list {
-   display: grid;
-}
-
-.activity-list li {
-   display: flex;
-   justify-content: space-between;
-   gap: var(--s-3);
-   padding: var(--s-3) 0;
-   border-bottom: 1px solid var(--line);
-   font-size: var(--text-sm);
-}
-
-.activity-list li:last-child {
-   border-bottom: 0;
-}
-
-.activity-list time {
-   color: var(--ink-3);
-   white-space: nowrap;
-}
-
-.mini-map {
-   position: relative;
-   height: 300px;
-   border: 1px solid var(--line-strong);
-   border-radius: var(--r-xl);
-   overflow: hidden;
-}
-
-.mini-map .map {
-   height: 100%;
-}
-
-.mini-map .pin {
-   --size: 26px;
-}
-
-.mini-map .pin--group {
-   --size: 30px;
-}
-
+.mini-map { position: relative; height: 300px; border: 1px solid var(--line-strong); border-radius: var(--r-xl); overflow: hidden; }
+.mini-map .map { height: 100%; }
+.mini-map .pin { --size: 26px; }
+.mini-map .pin--group { --size: 30px; }
 /* The whole map is one big link to the Map tab */
-.mini-map__link {
-   position: absolute;
-   inset: 0;
-   z-index: 5;
-   display: block;
-   cursor: pointer;
-   border-radius: inherit;
-}
+.mini-map__link { position: absolute; inset: 0; z-index: 5; display: block; cursor: pointer; border-radius: inherit; }
+.mini-map__link:hover { box-shadow: inset 0 0 0 3px var(--primary); }
 
-.mini-map__link:hover {
-   box-shadow: inset 0 0 0 3px var(--primary);
-}
+
+/* Friends' plans (Home and Social) */
+.friend-plans { display: grid; gap: var(--s-2); }
+.friend-plan { display: flex; align-items: center; gap: var(--s-3); }
+.friend-plan__who { font-weight: 600; font-size: var(--text-sm); }
+.friend-plan__what { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--s-3); }

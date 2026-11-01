@@ -2,7 +2,7 @@
 import { destroyMaps } from './components/mapWidget';
 import { confirmDialog, go, h, keepFocus, refreshModal } from './dom';
 import { getGuard, setGuard } from './nav';
-import { currentUser, subscribe, unreadCount } from './state';
+import { currentUser, subscribe, unreadCount, unreadMessages } from './state';
 import * as create from './views/create';
 import * as home from './views/home';
 import * as map from './views/map';
@@ -16,7 +16,7 @@ const routes: Record<string, Route> = {
   home: { render: () => home.render(), live: true, tab: 'home', title: 'Home' },
   map: { render: map.render, live: true, tab: 'map', title: 'Map' },
   create: { render: () => create.render(), live: false, tab: 'create', title: 'Create invite' },
-  social: { render: () => social.render(), live: true, tab: 'social', title: 'Social' },
+  social: { render: social.render, live: true, tab: 'social', title: 'Social' },
   profile: { render: profile.render, live: true, tab: 'profile', title: 'Profile' },
 };
 
@@ -36,7 +36,7 @@ function updateChrome(): void {
   document.body.dataset.auth = me ? 'in' : 'out';
   document.documentElement.dataset.theme = me?.settings.theme ?? 'light';
   const badge = document.getElementById('social-badge')!;
-  const n = me ? unreadCount(me.id) : 0;
+  const n = me ? unreadCount(me.id) + (me.settings.notify.messages ? unreadMessages(me.id) : 0) : 0;
   badge.hidden = n === 0;
   badge.textContent = String(n);
   badge.setAttribute('aria-label', `${n} unread updates`);

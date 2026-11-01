@@ -1,25 +1,30 @@
 // Profile inputs shared by onboarding and the Profile tab. They edit a draft object, then call redraw().
 import { geocode, motivationOptions, sampleCalendar, SKILLS, sports } from '../data';
-import { h } from '../dom';
-import type { BusyBlock, Motivation, Skill, User } from '../types';
+import { append, h } from '../dom';
+import type { BusyBlock, Motivation, Skill, Sport, User } from '../types';
+import { seg } from './seg';
+import { sportLabel, uiIcon } from './sportBits';
 
+/** One entry per sport: "try" (want to try) or the user's skill level. Sports not in the object are not added. */
+export type SportChoice = 'try' | Skill;
 export interface ProfileDraft {
   name: string; address: string; motivations: Motivation[];
-  current: Record<string, Skill>; desired: string[]; calendar: BusyBlock[] | null;
+  sports: Record<string, SportChoice>; calendar: BusyBlock[] | null;
 }
-export const blankDraft = (): ProfileDraft => ({ name: '', address: '', motivations: [], current: {}, desired: [], calendar: null });
+export const blankDraft = (): ProfileDraft => ({ name: '', address: '', motivations: [], sports: {}, calendar: null });
 export const draftFromUser = (u: User): ProfileDraft => ({
   name: u.name, address: u.address, motivations: [...u.motivations],
-  current: Object.fromEntries(u.currentSports.map((s) => [s.sportId, s.skill])), desired: [...u.desiredSports],
+  sports: { ...Object.fromEntries(u.desiredSports.map((id) => [id, 'try' as SportChoice])), ...Object.fromEntries(u.currentSports.map((s) => [s.sportId, s.skill as SportChoice])) },
   calendar: u.calendar ? u.calendar.map((b) => ({ ...b })) : null,
 });
 /** Turns the draft into a profile; the address goes through the fake lookup to find area and map position. */
 export function draftToProfile(d: ProfileDraft): Omit<User, 'id' | 'avatarColor' | 'friendIds' | 'settings'> {
   const g = geocode(d.address);
+  const entries = Object.entries(d.sports);
   return {
     name: d.name.trim(), address: d.address.trim(), area: g.area, lat: g.lat, lng: g.lng, motivations: d.motivations,
-    currentSports: Object.entries(d.current).map(([sportId, skill]) => ({ sportId, skill })),
-    desiredSports: d.desired.filter((id) => !(id in d.current)), calendar: d.calendar,
+    currentSports: entries.filter(([, v]) => v !== 'try').map(([sportId, v]) => ({ sportId, skill: v as Skill })),
+    desiredSports: entries.filter(([, v]) => v === 'try').map(([id]) => id), calendar: d.calendar,
   };
 }
 
@@ -41,26 +46,33 @@ export function motivationField(d: ProfileDraft, redraw: () => void): HTMLElemen
     }, h('strong', {}, m.label), h('small', {}, m.hint)))));
 }
 
-/** One list: each sport with its own skill levels. Pressing the chosen level again clears it. */
-export function sportsPlayField(d: ProfileDraft, redraw: () => void): HTMLElement {
-  return h('ul', { class: 'sport-list' }, sports.map((s) => h('li', { class: 'sport-row' },
-    h('div', { class: 'sport-row__name' }, h('strong', {}, s.name), h('small', {}, s.tagline)),
-    h('div', { class: 'seg', role: 'group', 'aria-label': `${s.name} skill level` }, SKILLS.map((k) => h('button', {
-      type: 'button', 'aria-pressed': d.current[s.id] === k, dataset: { key: `play-${s.id}-${k}` },
-      onClick: () => { if (d.current[s.id] === k) delete d.current[s.id]; else { d.current[s.id] = k; d.desired = d.desired.filter((x) => x !== s.id); } redraw(); },
-    }, k))))));
-}
+const CHOICES: { value: SportChoice; label: string }[] = [{ value: 'try', label: 'Want to try' }, ...SKILLS.map((k) => ({ value: k as SportChoice, label: k }))];
+const queries = new WeakMap<ProfileDraft, string>();   // the search text is not part of the profile, so it lives outside the draft
 
-/** Same list style, without skill levels. */
-export function sportsWantField(d: ProfileDraft, redraw: () => void): HTMLElement {
-  const rows = sports.filter((s) => !(s.id in d.current));
-  return h('ul', { class: 'sport-list' }, rows.map((s) => {
-    const on = d.desired.includes(s.id);
-    return h('li', { class: 'sport-row' },
-      h('div', { class: 'sport-row__name' }, h('strong', {}, s.name), h('small', {}, s.tagline)),
-      h('button', { type: 'button', class: 'btn btn--secondary btn--toggle', 'aria-pressed': on, dataset: { key: `want-${s.id}` },
-        onClick: () => { d.desired = on ? d.desired.filter((x) => x !== s.id) : [...d.desired, s.id]; redraw(); } }, on ? 'Added' : 'Add'));
-  }));
+/** "Your sports" (added ones, with their level) above a search to add more. Pressing the chosen level again removes the sport. */
+export function sportsField(d: ProfileDraft, redraw: () => void, onAbout: (sportId: string) => void): HTMLElement {
+  const row = (s: Sport) => h('li', { class: 'sport-row' },
+    h('div', { class: 'sport-row__name' }, sportLabel(s.id, { as: 'strong', onAbout: () => onAbout(s.id) }), h('small', {}, s.tagline)),
+    seg<SportChoice>(`sport-${s.id}`, CHOICES, (d.sports[s.id] ?? '') as SportChoice,
+      (v) => { if (d.sports[s.id] === v) delete d.sports[s.id]; else d.sports[s.id] = v; redraw(); }));
+
+  const results = h('ul', { class: 'sport-list' });
+  function fillResults(): void {
+    const q = (queries.get(d) ?? '').trim().toLowerCase();
+    const matches = sports.filter((s) => !(s.id in d.sports) && (!q || s.name.toLowerCase().includes(q) || s.tagline.toLowerCase().includes(q)));
+    results.replaceChildren();
+    append(results, matches.length ? matches.map(row) : [h('li', { class: 'muted sport-row' }, q ? 'No sports match your search.' : 'You have added every sport.')]);
+  }
+  fillResults();
+
+  const added = sports.filter((s) => s.id in d.sports);
+  return h('div', { class: 'stack' },
+    added.length ? h('div', {}, h('h3', {}, 'Your sports'), h('ul', { class: 'sport-list' }, added.map(row))) : null,
+    h('div', {}, h('h3', {}, 'Add a sport'),
+      h('label', { class: 'search-field' }, h('span', { class: 'sr-only' }, 'Search sports'), uiIcon('search'),
+        h('input', { class: 'input', type: 'search', placeholder: 'Search sports', value: queries.get(d) ?? '', dataset: { key: 'sport-search' },
+          onInput: (e: Event) => { queries.set(d, (e.target as HTMLInputElement).value); fillResults(); } })),
+      results));
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

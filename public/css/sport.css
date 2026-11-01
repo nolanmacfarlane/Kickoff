@@ -6,3 +6,5 @@
 .gear-item__note { grid-column: 1; color: var(--ink-2); font-size: var(--text-sm); }
 .gear-item .tag { grid-row: 1; grid-column: 2; }
 .gear-item__action { grid-column: 2; grid-row: 2; justify-self: end; }
+
+.sport-head { align-items: center; }

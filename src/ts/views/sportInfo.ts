@@ -1,4 +1,5 @@
-// "About this sport" popup. Reached from the (?) next to a sport name, Create invite, and the map's sport filter.
+// "About this sport" popup. Reached ONLY from the (?) button next to a sport name.
+import { sportIcon } from '../components/sportBits';
 import { venues } from '../data';
 import { fmtWhen, h, openModal, tag } from '../dom';
 import { currentUser, getSport, mapInvites } from '../state';
@@ -11,14 +12,15 @@ export function openSportInfo(sportId: string): void {
 }
 
 function view(sportId: string): HTMLElement | null {
-  const me = currentUser();
+  const me = currentUser();      // none during onboarding, so there are no shared-gear invites to show then
   const sport = getSport(sportId);
-  if (!me || !sport) return null;
+  if (!sport) return null;
   const rentals = venues.filter((v) => v.sportIds.includes(sport.id) && v.rentals.length);
-  const sharing = mapInvites(me.id).filter((i) => i.sportId === sport.id && i.gear.available);
+  const sharing = me ? mapInvites(me.id).filter((i) => i.sportId === sport.id && i.gear.available) : [];
 
   return h('div', { class: 'detail' },
-    h('div', { class: 'detail__head' }, h('div', { class: 'grow' }, h('h2', {}, sport.name), h('p', { class: 'card__meta' }, sport.description))),
+    h('div', { class: 'detail__head sport-head' }, sportIcon(sport.id, 'sport-icon sport-icon--xl'),
+      h('div', { class: 'grow' }, h('h2', {}, sport.name), h('p', { class: 'card__meta' }, sport.description))),
     h('div', { class: 'tags' }, tag(sport.typicalGroup), tag(sport.soloFriendly ? 'Individual sport, done together' : 'Team or partner game')),
     h('section', {}, h('h3', {}, 'What you need'),
       h('ul', { class: 'gear-list' }, sport.gear.map((g) => h('li', { class: 'gear-item' }, h('span', { class: 'gear-item__name' }, g.item),

@@ -34,3 +34,5 @@
 
 .sticky-col { position: sticky; top: calc(var(--topbar-h) + var(--s-4)); display: grid; gap: var(--s-4); }
 .form-error { scroll-margin-top: calc(var(--topbar-h) + var(--s-4)); }
+
+.venue-results:empty { display: none; }

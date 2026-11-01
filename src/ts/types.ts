@@ -15,7 +15,7 @@ export interface BusyBlock { day: number; startHour: number; endHour: number; la
 export interface Settings {
   theme: 'light' | 'dark';
   units: 'km' | 'mi';
-  notify: { joins: boolean; leaves: boolean; friends: boolean };
+  notify: { joins: boolean; leaves: boolean; friends: boolean; messages: boolean };
 }
 
 export interface User {
@@ -97,6 +97,10 @@ export interface Notification {
 export interface FriendRequest { id: string; fromId: string; toId: string; createdAt: number }
 export type FriendStatus = 'self' | 'friend' | 'requested' | 'incoming' | 'none';
 
+/** Chats: direct messages between friends, and one group chat per meetup. senderId null = a system line ("Maya joined"). */
+export interface Message { id: string; chatId: string; senderId: string | null; text: string; at: number }
+export interface ChatSummary { id: string; kind: 'direct' | 'meetup'; inviteId?: string; friendId?: string; last?: Message; unread: number; readOnly: boolean }
+
 export interface ActivityItem { id: string; userId: string; text: string; at: number; inviteId: string | null }
 
 export interface AppState {
@@ -106,6 +110,8 @@ export interface AppState {
   notifications: Notification[];
   activity: ActivityItem[];
   friendRequests: FriendRequest[];
+  messages: Message[];
+  chatReads: Record<string, Record<string, number>>;   // userId -> chatId -> time last read
 }
 
 export type Result = { ok: true; id?: string } | { ok: false; error: string };
