@@ -1,5 +1,5 @@
 // Onboarding wizard: 3 short steps with a slide between them. "Skip with demo user" is on every step.
-import { blankDraft, calendarField, draftToProfile, identityFields, motivationField, sportsField, type ProfileDraft } from '../components/profileFields';
+import { blankDraft, calendarField, draftToProfile, identityFields, motivationField, pendingSports, sportsField, type ProfileDraft } from '../components/profileFields';
 import { firstName, go, h, keepFocus, toast } from '../dom';
 import { completeOnboarding, loginDemo } from '../state';
 import { openSportInfo } from './sportInfo';
@@ -14,7 +14,7 @@ export function render(): HTMLElement {
 
   const titles = [
     ['Welcome to Kickoff', 'Tell us a little about you and we will suggest games that fit. It takes about a minute.'],
-    ['Your sports', 'Search for a sport, then choose your level, or mark it as one you want to try.'],
+    ['Your sports', 'Search for a sport and add it, then choose your level, or mark it as one you want to try.'],
     ['Add your schedule', 'Optional. Connect a calendar so suggestions match when you are free.'],
   ];
 
@@ -34,6 +34,7 @@ export function render(): HTMLElement {
       else if (d.motivations.length === 0) error = 'Pick at least one thing you are looking for.';
       if (error) { dir = null; return draw(); }
     }
+    if (step === 1 && pendingSports(d).length) { error = `Choose a level for ${pendingSports(d).join(', ')}, or remove it.`; dir = null; return draw(); }
     if (step < LAST) return go_(step + 1);
     const res = completeOnboarding(draftToProfile(d));
     if (!res.ok) { error = res.error; dir = null; return draw(); }

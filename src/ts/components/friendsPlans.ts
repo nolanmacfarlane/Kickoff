@@ -11,7 +11,7 @@ const who = (friends: User[]): string =>
 
 export function friendsPlansList(me: User, limit: number | null, onOpen: (inviteId: string) => void, onAbout: (sportId: string) => void): HTMLElement {
   const plans = friendsPlans(me.id).slice(0, limit ?? undefined);
-  if (!plans.length) return h('p', { class: 'muted' }, me.friendIds.length ? 'None of your friends have joined an upcoming game yet.' : 'Add friends to see what they are going to.');
+  if (!plans.length) return h('div', { class: 'empty empty--tight' }, me.friendIds.length ? 'None of your friends have joined an upcoming game yet.' : 'Add friends to see what they are going to.');
   return h('ul', { class: 'friend-plans' }, plans.map(({ invite, friends }) =>
     h('li', { class: 'card card--tight friend-plan' },
       h('div', { class: 'avatar-stack' }, friends.slice(0, 3).map((f) => avatar(f, 'sm'))),

@@ -140,11 +140,11 @@ export function render(): HTMLElement {
             f.gearOn ? h('div', { class: 'gear-fields' }, h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'What can you share?'),
               h('input', { class: 'input', type: 'text', value: f.gearText, placeholder: 'e.g. One spare glove and a bat', dataset: { key: 'geartext' }, onInput: (e: Event) => { f.gearText = (e.target as HTMLInputElement).value; } }))) : null,
             h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Notes (optional)'),
-              h('textarea', { class: 'textarea', value: f.notes, placeholder: 'Anything people should know before they come', dataset: { key: 'notes' }, onInput: (e: Event) => { f.notes = (e.target as HTMLTextAreaElement).value; } }))),
-          h('div', { class: 'create-form__actions' },
-            h('button', { class: 'btn btn--primary', type: 'button', onClick: submit }, 'Create invite'),
-            h('a', { class: 'btn btn--secondary', href: '#/home' }, 'Cancel'))),
-        where()),
+              h('textarea', { class: 'textarea', value: f.notes, placeholder: 'Anything people should know before they come', dataset: { key: 'notes' }, onInput: (e: Event) => { f.notes = (e.target as HTMLTextAreaElement).value; } })))),
+        where(),
+        h('div', { class: 'create-actions' },
+          h('button', { class: 'btn btn--primary', type: 'button', onClick: submit }, 'Create invite'),
+          h('a', { class: 'btn btn--secondary', href: '#/home' }, 'Cancel'))),
     ]);
     handle.map.invalidateSize(); });
     if (scrollToError) document.getElementById('form-error')?.scrollIntoView?.({ block: 'center' });

@@ -37,7 +37,7 @@ export function render(args: string[]): HTMLElement {
             h('p', { class: `chat-item__preview ${c.unread ? 'chat-item__preview--unread' : ''}`.trim() }, preview(c))),
           c.unread ? h('span', { class: 'badge', 'aria-label': `${c.unread} unread` }, String(c.unread)) : null);
       })
-    : [h('p', { class: 'muted chat-empty' }, 'Add friends or join a meetup to start chatting.')]);
+    : [h('div', { class: 'empty empty--tight' }, 'Add friends or join a meetup to start chatting.')]);
 
   let pane: HTMLElement;
   if (!selected) {
@@ -46,11 +46,11 @@ export function render(args: string[]): HTMLElement {
   } else {
     const d = describe(selected);
     const inv = selected.inviteId ? getInvite(selected.inviteId)! : null;
-    const people = (inv ? inv.memberIds : [me.id, selected.friendId!]).map((id) => getUser(id)!);
+    const people = (inv ? inv.memberIds : [selected.friendId!]).map((id) => getUser(id)!);   // a direct chat shows only the other person
     const thread = h('div', { class: 'thread', role: 'log', 'aria-live': 'polite', 'aria-label': 'Messages' });
     let lastDay = '';
     const msgs = messagesIn(selected.id);
-    if (!msgs.length) thread.append(h('p', { class: 'muted thread__empty' }, 'No messages yet. Say hello.'));
+    if (!msgs.length) thread.append(h('div', { class: 'empty empty--tight thread__empty' }, 'No messages yet. Say hello.'));
     for (const m of msgs) {
       const day = dayLabel(m.at);
       if (day !== lastDay) { thread.append(h('div', { class: 'thread__day' }, day)); lastDay = day; }

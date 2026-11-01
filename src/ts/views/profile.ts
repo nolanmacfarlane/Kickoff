@@ -1,7 +1,7 @@
 // Profile tab: menu on the left (as in the sketch), section on the right. All onboarding answers are edited in "Your profile".
 import { inviteCard } from '../components/inviteCard';
 import {
-  calendarField, draftFromUser, draftToProfile, identityFields, motivationField, sportsField, type ProfileDraft,
+  calendarField, draftFromUser, draftToProfile, identityFields, motivationField, pendingSports, sportsField, type ProfileDraft,
 } from '../components/profileFields';
 import { seg } from '../components/seg';
 import { avatar, confirmDialog, fmtAgo, go, h, keepFocus, toast } from '../dom';
@@ -28,6 +28,7 @@ function profileEditor(): HTMLElement {
     if (!d.name.trim()) { error = 'Add your name.'; draw(); return false; }
     if (!d.address.trim()) { error = 'Add your address.'; draw(); return false; }
     if (d.motivations.length === 0) { error = 'Pick at least one thing you are looking for.'; draw(); return false; }
+    if (pendingSports(d).length) { error = `Choose a level for ${pendingSports(d).join(', ')}, or remove it.`; draw(); return false; }
     editing = null; setGuard(null);              // clear first: updateProfile triggers a re-render
     const res = updateProfile(draftToProfile(d));
     if (!res.ok) { editing = ed; error = res.error; draw(); return false; }
@@ -96,9 +97,9 @@ export function render(args: string[]): HTMLElement {
   else if (section === 'activity') {
     const up = myUpcoming(me.id), past = myPast(me.id), log = activityFor(me.id);
     content = h('div', { class: 'stack' },
-      h('section', {}, h('h2', {}, 'Upcoming'), up.length ? h('div', { class: 'rec-list' }, up.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('p', { class: 'muted' }, 'Nothing planned.')),
-      h('section', {}, h('h2', {}, 'Past meetups'), past.length ? h('div', { class: 'rec-list' }, past.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('p', { class: 'muted' }, 'No past meetups yet.')),
-      h('section', {}, h('h2', {}, 'History'), log.length ? h('ul', { class: 'card activity-list' }, log.map((a) => h('li', {}, h('span', {}, a.text), h('time', {}, fmtAgo(a.at))))) : h('p', { class: 'muted' }, 'No activity yet.')));
+      h('section', {}, h('h2', {}, 'Upcoming'), up.length ? h('div', { class: 'rec-list' }, up.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'Nothing planned.')),
+      h('section', {}, h('h2', {}, 'Past meetups'), past.length ? h('div', { class: 'rec-list' }, past.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'No past meetups yet.')),
+      h('section', {}, h('h2', {}, 'History'), log.length ? h('ul', { class: 'card activity-list' }, log.map((a) => h('li', {}, h('span', {}, a.text), h('time', {}, fmtAgo(a.at))))) : h('div', { class: 'empty empty--tight' }, 'No activity yet.')));
   } else content = h('div', { class: 'card stack' }, h('h2', {}, 'About us'), h('p', {}, 'Kickoff helps people play sports together on short notice, or plan ahead. This is a course prototype with made-up data.'),
     h('p', { class: 'muted' }, 'Sport icons by Phosphor Icons (MIT licence). Map data from OpenStreetMap contributors, map tiles by CARTO, map library Leaflet.'));
 

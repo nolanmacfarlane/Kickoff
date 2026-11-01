@@ -370,6 +370,14 @@ export function markInviteRead(inviteId: string): void {
   st.notifications.forEach((n) => { if (n.userId === me.id && n.inviteId === inviteId) n.read = true; });
   emit();
 }
+/** Marks one kind of notification as read (e.g. friend requests when the Social tab is opened). No re-render if there is nothing to mark. */
+export function markKindRead(kind: NotificationKind): void {
+  const me = currentUser();
+  if (!me) return;
+  let changed = false;
+  st.notifications.forEach((n) => { if (n.userId === me.id && n.kind === kind && !n.read) { n.read = true; changed = true; } });
+  if (changed) emit();
+}
 export function markAllRead(): void {
   const me = currentUser();
   if (!me) return;

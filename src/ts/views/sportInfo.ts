@@ -33,5 +33,5 @@ function view(sportId: string): HTMLElement | null {
             sharing.map((i) => h('li', { class: 'gear-item' }, h('span', { class: 'gear-item__name' }, i.gear.description), tag('Free', 'tag--gear'),
               h('span', { class: 'gear-item__note' }, `${fmtWhen(i.start, i.end)}, ${i.location.label}`),
               h('button', { class: 'btn btn--secondary btn--sm gear-item__action', type: 'button', onClick: () => openInvite(i.id) }, 'View invite'))))
-        : h('p', { class: 'muted' }, 'No rentals or shared gear for this sport right now.')));
+        : h('div', { class: 'empty empty--tight' }, 'No rentals or shared gear for this sport right now.')));
 }

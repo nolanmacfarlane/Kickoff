@@ -124,3 +124,5 @@
 .icon-btn--on-map { background: var(--surface); box-shadow: var(--shadow-pop); width: 44px; height: 44px; color: var(--ink); }
 .icon--inline { width: 1.2em; height: 1.2em; display: inline-block; flex: none; }
 .icon-btn .icon--inline { width: 24px; height: 24px; }
+
+.empty--tight { padding: var(--s-4); font-size: var(--text-sm); }

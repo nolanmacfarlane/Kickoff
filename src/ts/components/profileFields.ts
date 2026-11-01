@@ -1,12 +1,11 @@
 // Profile inputs shared by onboarding and the Profile tab. They edit a draft object, then call redraw().
 import { geocode, motivationOptions, sampleCalendar, SKILLS, sports } from '../data';
-import { append, h } from '../dom';
+import { append, h, iconButton } from '../dom';
 import type { BusyBlock, Motivation, Skill, Sport, User } from '../types';
-import { seg } from './seg';
 import { sportLabel, uiIcon } from './sportBits';
 
-/** One entry per sport: "try" (want to try) or the user's skill level. Sports not in the object are not added. */
-export type SportChoice = 'try' | Skill;
+/** One entry per added sport: "try" (want to try), a skill level, or "unset" right after adding. Sports not in the object are not added. */
+export type SportChoice = 'try' | Skill | 'unset';   // 'unset' = just added, level not chosen yet
 export interface ProfileDraft {
   name: string; address: string; motivations: Motivation[];
   sports: Record<string, SportChoice>; calendar: BusyBlock[] | null;
@@ -23,7 +22,7 @@ export function draftToProfile(d: ProfileDraft): Omit<User, 'id' | 'avatarColor'
   const entries = Object.entries(d.sports);
   return {
     name: d.name.trim(), address: d.address.trim(), area: g.area, lat: g.lat, lng: g.lng, motivations: d.motivations,
-    currentSports: entries.filter(([, v]) => v !== 'try').map(([sportId, v]) => ({ sportId, skill: v as Skill })),
+    currentSports: entries.filter(([, v]) => v !== 'try' && v !== 'unset').map(([sportId, v]) => ({ sportId, skill: v as Skill })),
     desiredSports: entries.filter(([, v]) => v === 'try').map(([id]) => id), calendar: d.calendar,
   };
 }
@@ -46,33 +45,67 @@ export function motivationField(d: ProfileDraft, redraw: () => void): HTMLElemen
     }, h('strong', {}, m.label), h('small', {}, m.hint)))));
 }
 
-const CHOICES: { value: SportChoice; label: string }[] = [{ value: 'try', label: 'Want to try' }, ...SKILLS.map((k) => ({ value: k as SportChoice, label: k }))];
+const LEVELS: { value: SportChoice; label: string }[] = [{ value: 'try', label: 'Want to try' }, ...SKILLS.map((k) => ({ value: k as SportChoice, label: k }))];
 const queries = new WeakMap<ProfileDraft, string>();   // the search text is not part of the profile, so it lives outside the draft
 
-/** "Your sports" (added ones, with their level) above a search to add more. Pressing the chosen level again removes the sport. */
+/** Names of sports that were added but have no level yet. Onboarding and Save use this to ask for one. */
+export const pendingSports = (d: ProfileDraft): string[] =>
+  Object.entries(d.sports).filter(([, v]) => v === 'unset').map(([id]) => sports.find((s) => s.id === id)!.name);
+
+/**
+ * Add, then one dropdown: search for a sport, press Add, and it moves to "Your sports" with a level dropdown
+ * (Want to try, or a skill level) and an x button to remove it. The search lists nothing until you type.
+ */
 export function sportsField(d: ProfileDraft, redraw: () => void, onAbout: (sportId: string) => void): HTMLElement {
-  const row = (s: Sport) => h('li', { class: 'sport-row' },
-    h('div', { class: 'sport-row__name' }, sportLabel(s.id, { as: 'strong', onAbout: () => onAbout(s.id) }), h('small', {}, s.tagline)),
-    seg<SportChoice>(`sport-${s.id}`, CHOICES, (d.sports[s.id] ?? '') as SportChoice,
-      (v) => { if (d.sports[s.id] === v) delete d.sports[s.id]; else d.sports[s.id] = v; redraw(); }));
+  const info = (s: Sport) => h('div', { class: 'sport-row__name' }, sportLabel(s.id, { as: 'strong', onAbout: () => onAbout(s.id) }), h('small', {}, s.tagline));
+
+  function add(id: string): void {
+    d.sports[id] = 'unset';
+    queries.set(d, '');
+    redraw();
+    setTimeout(() => {   // jump to the new row's dropdown, and open it where the browser allows
+      const select = document.querySelector<HTMLSelectElement>(`[data-key="level-${id}"]`);
+      select?.focus();
+      try { select?.showPicker?.(); } catch { /* needs a fresh user gesture in some browsers; focus is enough */ }
+    }, 0);
+  }
+
+  const levelSelect = (s: Sport) => {
+    const current = d.sports[s.id];
+    return h('select', { class: 'select select--level', 'aria-label': `${s.name} level`, dataset: { key: `level-${s.id}` }, value: current === 'unset' ? '' : current,
+      onChange: (e: Event) => {
+        d.sports[s.id] = (e.target as HTMLSelectElement).value as SportChoice;
+        redraw();
+      } },
+      current === 'unset' ? h('option', { value: '', disabled: true }, 'Choose level') : null,
+      LEVELS.map((o) => h('option', { value: o.value }, o.label)));
+  };
+  const controls = (s: Sport) => h('div', { class: 'sport-row__controls' }, levelSelect(s),
+    iconButton('close', `Remove ${s.name}`, () => { delete d.sports[s.id]; redraw(); }));
 
   const results = h('ul', { class: 'sport-list' });
   function fillResults(): void {
     const q = (queries.get(d) ?? '').trim().toLowerCase();
-    const matches = sports.filter((s) => !(s.id in d.sports) && (!q || s.name.toLowerCase().includes(q) || s.tagline.toLowerCase().includes(q)));
     results.replaceChildren();
-    append(results, matches.length ? matches.map(row) : [h('li', { class: 'muted sport-row' }, q ? 'No sports match your search.' : 'You have added every sport.')]);
+    if (!q) return;                                         // nothing is listed until the person searches
+    const matches = sports.filter((s) => !(s.id in d.sports) && (s.name.toLowerCase().includes(q) || s.tagline.toLowerCase().includes(q)));
+    append(results, matches.length
+      ? matches.map((s) => h('li', { class: 'sport-row' }, info(s),
+          h('button', { type: 'button', class: 'btn btn--secondary btn--sm', 'aria-label': `Add ${s.name}`, dataset: { key: `add-${s.id}` }, onClick: () => add(s.id) }, 'Add')))
+      : [h('li', { class: 'muted sport-row' }, 'No sports match your search.')]);
   }
   fillResults();
 
   const added = sports.filter((s) => s.id in d.sports);
   return h('div', { class: 'stack' },
-    added.length ? h('div', {}, h('h3', {}, 'Your sports'), h('ul', { class: 'sport-list' }, added.map(row))) : null,
     h('div', {}, h('h3', {}, 'Add a sport'),
       h('label', { class: 'search-field' }, h('span', { class: 'sr-only' }, 'Search sports'), uiIcon('search'),
         h('input', { class: 'input', type: 'search', placeholder: 'Search sports', value: queries.get(d) ?? '', dataset: { key: 'sport-search' },
           onInput: (e: Event) => { queries.set(d, (e.target as HTMLInputElement).value); fillResults(); } })),
-      results));
+      results),
+    h('div', {}, h('h3', {}, 'Your sports'),
+      added.length ? h('ul', { class: 'sport-list' }, added.map((s) => h('li', { class: 'sport-row' }, info(s), controls(s))))
+        : h('div', { class: 'empty empty--tight' }, 'No sports yet. Search above to add one.')));
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
