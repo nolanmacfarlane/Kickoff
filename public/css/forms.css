@@ -41,5 +41,31 @@ legend { padding: 0; font-weight: 600; font-size: var(--text-sm); margin-bottom:
 .input-row .select { flex: 1; }
 .select-help { display: inline-flex; align-items: center; gap: var(--s-1); }
 .search-field { position: relative; display: block; }
+.seg > button:focus-visible, .toggle:focus-visible { outline-offset: -3px; }   /* inside the control, where the bar would clip it */
 .search-field > svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--ink-3); pointer-events: none; }
 .search-field .input { padding-left: 40px; }
+
+/* Pick ANY: separate chips, each with a checkbox. (Pick ONE is the joined .seg bar above.) */
+.toggle-group { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.toggle {
+  display: inline-flex; align-items: center; gap: var(--s-2); min-height: 40px; padding: 0 var(--s-3) 0 var(--s-2);
+  border: 1.5px solid var(--line-strong); border-radius: var(--r-md); background: var(--surface); font-weight: 500;
+}
+.toggle:hover { border-color: var(--ink); }
+.toggle[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); font-weight: 600; }
+.toggle__box { display: grid; place-items: center; flex: none; width: 20px; height: 20px; margin-top: 1px; border: 2px solid var(--ink-2); border-radius: 5px; background: var(--surface); color: var(--on-primary); }
+.toggle__box svg { width: 14px; height: 14px; opacity: 0; }
+[aria-pressed="true"] > .toggle__box { background: var(--primary); border-color: var(--primary); }
+[aria-pressed="true"] > .toggle__box svg { opacity: 1; }
+
+/* Type-ahead list: floats under the search box and covers what is below, so nothing shifts */
+.search-popup {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; max-height: 300px; overflow: auto;
+  padding: 4px; background: var(--surface); border: 1.5px solid var(--ink); border-radius: var(--r-md); box-shadow: var(--shadow-pop);
+}
+.search-option { display: flex; align-items: center; gap: var(--s-3); padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+.search-option:hover, .search-option--active { background: var(--primary-soft); }
+.search-option__text { display: grid; flex: 1; min-width: 0; }
+.search-option__text small { color: var(--ink-3); }
+.search-option__add { font-weight: 700; font-size: var(--text-sm); color: var(--primary); white-space: nowrap; }
+.search-popup__empty { padding: 12px; color: var(--ink-3); }

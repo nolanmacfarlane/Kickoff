@@ -19,7 +19,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 img, svg { display: block; max-width: 100%; }
 
-:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; border-radius: var(--r-sm); }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }   /* slim, so it never covers its neighbours */
 
 [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

@@ -2,7 +2,8 @@
 import { geocode, motivationOptions, sampleCalendar, SKILLS, sports } from '../data';
 import { append, h, iconButton } from '../dom';
 import type { BusyBlock, Motivation, Skill, Sport, User } from '../types';
-import { sportLabel, uiIcon } from './sportBits';
+import { toggleBox } from './seg';
+import { sportIcon, sportLabel, uiIcon } from './sportBits';
 
 /** One entry per added sport: "try" (want to try), a skill level, or "unset" right after adding. Sports not in the object are not added. */
 export type SportChoice = 'try' | Skill | 'unset';   // 'unset' = just added, level not chosen yet
@@ -42,7 +43,7 @@ export function motivationField(d: ProfileDraft, redraw: () => void): HTMLElemen
     h('div', { class: 'choice-grid' }, motivationOptions.map((m) => h('button', {
       type: 'button', class: 'choice', 'aria-pressed': d.motivations.includes(m.id), dataset: { key: `mot-${m.id}` },
       onClick: () => { d.motivations = d.motivations.includes(m.id) ? d.motivations.filter((x) => x !== m.id) : [...d.motivations, m.id]; redraw(); },
-    }, h('strong', {}, m.label), h('small', {}, m.hint)))));
+    }, toggleBox(), h('span', { class: 'choice__text' }, h('strong', {}, m.label), h('small', {}, m.hint))))));
 }
 
 const LEVELS: { value: SportChoice; label: string }[] = [{ value: 'try', label: 'Want to try' }, ...SKILLS.map((k) => ({ value: k as SportChoice, label: k }))];
@@ -52,11 +53,15 @@ const queries = new WeakMap<ProfileDraft, string>();   // the search text is not
 export const pendingSports = (d: ProfileDraft): string[] =>
   Object.entries(d.sports).filter(([, v]) => v === 'unset').map(([id]) => sports.find((s) => s.id === id)!.name);
 
+let comboId = 0;
+
 /**
- * Add, then one dropdown: search for a sport, press Add, and it moves to "Your sports" with a level dropdown
- * (Want to try, or a skill level) and an x button to remove it. The search lists nothing until you type.
+ * Add, then one dropdown. Search for a sport in a type-ahead box: matches float directly under the box (they do
+ * not push the page around, like LinkedIn's skill search). Choose one to add it to "Your sports", where a level
+ * dropdown (Want to try, or a skill level) and an x button live. Nothing is listed until you type.
  */
 export function sportsField(d: ProfileDraft, redraw: () => void, onAbout: (sportId: string) => void): HTMLElement {
+  const listId = `sport-results-${++comboId}`;
   const info = (s: Sport) => h('div', { class: 'sport-row__name' }, sportLabel(s.id, { as: 'strong', onAbout: () => onAbout(s.id) }), h('small', {}, s.tagline));
 
   function add(id: string): void {
@@ -73,36 +78,61 @@ export function sportsField(d: ProfileDraft, redraw: () => void, onAbout: (sport
   const levelSelect = (s: Sport) => {
     const current = d.sports[s.id];
     return h('select', { class: 'select select--level', 'aria-label': `${s.name} level`, dataset: { key: `level-${s.id}` }, value: current === 'unset' ? '' : current,
-      onChange: (e: Event) => {
-        d.sports[s.id] = (e.target as HTMLSelectElement).value as SportChoice;
-        redraw();
-      } },
+      onChange: (e: Event) => { d.sports[s.id] = (e.target as HTMLSelectElement).value as SportChoice; redraw(); } },
       current === 'unset' ? h('option', { value: '', disabled: true }, 'Choose level') : null,
       LEVELS.map((o) => h('option', { value: o.value }, o.label)));
   };
   const controls = (s: Sport) => h('div', { class: 'sport-row__controls' }, levelSelect(s),
     iconButton('close', `Remove ${s.name}`, () => { delete d.sports[s.id]; redraw(); }));
 
-  const results = h('ul', { class: 'sport-list' });
+  // ----- the search box and its floating list of matches -----
+  let matches: Sport[] = [];
+  let active = -1;
+  const popup = h('div', { class: 'search-popup', role: 'listbox', id: listId, 'aria-label': 'Matching sports', hidden: true });
+  const input = h('input', {
+    class: 'input', type: 'search', role: 'combobox', placeholder: 'Search sports', 'aria-label': 'Search sports', autocomplete: 'off',
+    'aria-autocomplete': 'list', 'aria-expanded': 'false', 'aria-controls': listId, value: queries.get(d) ?? '', dataset: { key: 'sport-search' },
+    onInput: (e: Event) => { queries.set(d, (e.target as HTMLInputElement).value); fillResults(); },
+    onFocus: () => fillResults(),
+    onBlur: () => close(),
+    onKeydown: (e: Event) => onKey(e as KeyboardEvent),
+  });
+
+  function close(): void { popup.hidden = true; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
+  function setActive(i: number): void {
+    active = i;
+    Array.from(popup.children).forEach((el, idx) => { el.classList.toggle('search-option--active', idx === i); el.setAttribute('aria-selected', String(idx === i)); });
+    const el = popup.children[i] as HTMLElement | undefined;
+    if (el) { input.setAttribute('aria-activedescendant', el.id); el.scrollIntoView?.({ block: 'nearest' }); } else input.removeAttribute('aria-activedescendant');
+  }
   function fillResults(): void {
     const q = (queries.get(d) ?? '').trim().toLowerCase();
-    results.replaceChildren();
-    if (!q) return;                                         // nothing is listed until the person searches
-    const matches = sports.filter((s) => !(s.id in d.sports) && (s.name.toLowerCase().includes(q) || s.tagline.toLowerCase().includes(q)));
-    append(results, matches.length
-      ? matches.map((s) => h('li', { class: 'sport-row' }, info(s),
-          h('button', { type: 'button', class: 'btn btn--secondary btn--sm', 'aria-label': `Add ${s.name}`, dataset: { key: `add-${s.id}` }, onClick: () => add(s.id) }, 'Add')))
-      : [h('li', { class: 'muted sport-row' }, 'No sports match your search.')]);
+    popup.replaceChildren(); matches = []; active = -1;
+    if (!q) { close(); return; }                              // nothing is listed until the person types
+    matches = sports.filter((s) => !(s.id in d.sports) && (s.name.toLowerCase().includes(q) || s.tagline.toLowerCase().includes(q)));
+    popup.hidden = false; input.setAttribute('aria-expanded', 'true');
+    if (!matches.length) { append(popup, [h('div', { class: 'search-popup__empty' }, 'No sports match your search.')]); return; }
+    append(popup, matches.map((s, i) => h('div', {
+      class: 'search-option', role: 'option', id: `${listId}-${i}`, 'aria-selected': 'false', dataset: { key: `add-${s.id}` },
+      onMouseDown: (e: Event) => e.preventDefault(),         // keep focus in the search box while clicking
+      onClick: () => add(s.id),
+    }, sportIcon(s.id), h('span', { class: 'search-option__text' }, h('strong', {}, s.name), h('small', {}, s.tagline)), h('span', { class: 'search-option__add' }, '+ Add'))));
   }
-  fillResults();
+  function onKey(e: KeyboardEvent): void {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!matches.length) return;
+      e.preventDefault(); popup.hidden = false;
+      setActive(e.key === 'ArrowDown' ? Math.min(matches.length - 1, active + 1) : Math.max(0, active - 1));
+    } else if (e.key === 'Enter') {
+      const pick = active >= 0 ? matches[active] : matches.length === 1 ? matches[0] : undefined;   // Enter adds the highlighted match, or the only one
+      if (pick) { e.preventDefault(); add(pick.id); }
+    } else if (e.key === 'Escape' && !popup.hidden) { e.preventDefault(); e.stopPropagation(); close(); }
+  }
+  fillResults(); close();
 
   const added = sports.filter((s) => s.id in d.sports);
   return h('div', { class: 'stack' },
-    h('div', {}, h('h3', {}, 'Add a sport'),
-      h('label', { class: 'search-field' }, h('span', { class: 'sr-only' }, 'Search sports'), uiIcon('search'),
-        h('input', { class: 'input', type: 'search', placeholder: 'Search sports', value: queries.get(d) ?? '', dataset: { key: 'sport-search' },
-          onInput: (e: Event) => { queries.set(d, (e.target as HTMLInputElement).value); fillResults(); } })),
-      results),
+    h('div', {}, h('h3', {}, 'Add a sport'), h('div', { class: 'search-field' }, uiIcon('search'), input, popup)),
     h('div', {}, h('h3', {}, 'Your sports'),
       added.length ? h('ul', { class: 'sport-list' }, added.map((s) => h('li', { class: 'sport-row' }, info(s), controls(s))))
         : h('div', { class: 'empty empty--tight' }, 'No sports yet. Search above to add one.')));
