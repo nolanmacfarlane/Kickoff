@@ -7,7 +7,7 @@ base = 'node_modules/@phosphor-icons/core/assets/regular/'
 SPORTS = {'soccer': 'soccer-ball', 'basketball': 'basketball', 'baseball': 'baseball', 'tennis': 'tennis-ball', 'cycling': 'bicycle',
           'running': 'person-simple-run', 'bouldering': 'mountains', 'fencing': 'sword', 'golf': 'golf', 'volleyball': 'volleyball',
           'badminton': 'racquet', 'swimming': 'person-simple-swim', 'hiking': 'person-simple-hike', 'yoga': 'person-simple-tai-chi', 'cricket': 'cricket'}
-UI = {'chat': 'chat-circle', 'send': 'paper-plane-tilt', 'search': 'magnifying-glass', 'share': 'share-network', 'list': 'list-bullets'}
+UI = {'chat': 'chat-circle', 'send': 'paper-plane-tilt', 'search': 'magnifying-glass', 'share': 'share-network', 'list': 'list-bullets', 'mapPin': 'map-pin', 'sidebar': 'sidebar-simple', 'warning': 'warning'}
 def inner(name):
     return re.sub(r'^<svg[^>]*>|</svg>\s*$', '', open(base + name + '.svg').read().strip())
 out = '''// Icons from Phosphor Icons (https://phosphoricons.com), MIT licence, "regular" weight.

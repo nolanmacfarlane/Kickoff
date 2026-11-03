@@ -38,7 +38,7 @@ export const go = (hash: string): void => { location.hash = hash; };
 export function keepFocus(fn: () => void): void {
   const key = (document.activeElement as HTMLElement | null)?.dataset?.key;
   fn();
-  if (key) (document.querySelector(`[data-key="${key}"]`) as HTMLElement | null)?.focus();
+  if (key) (document.querySelector(`[data-key="${key}"]`) as HTMLElement | null)?.focus({ preventScroll: true });   // same control, same place: no need to scroll
 }
 
 // ---------- formatting ----------

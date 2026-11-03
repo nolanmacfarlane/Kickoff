@@ -5,7 +5,7 @@ import { SKILLS } from '../data';
 import { joinInvite } from '../components/joinFlow';
 import { shareInvite } from '../components/share';
 import { sportLabel, uiIcon } from '../components/sportBits';
-import { avatar, closeModal, fmtWhen, go, h, openModal, tag, toast } from '../dom';
+import { avatar, closeModal, confirmDialog, fmtWhen, go, h, openModal, tag, toast } from '../dom';
 import { matchInvite } from '../match';
 import {
   acceptFriendRequest, canSee, currentUser, editInviteTags, friendStatus, getInvite, getSport, getUser, getVenue,
@@ -75,8 +75,14 @@ function view(id: string): HTMLElement | null {
     isMember ? h('div', { class: 'detail__actions' }, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'View chat')) : null);
   else if (isMember) {
     const cancel = isHost && inv.memberIds.length === 1;
-    actions = h('div', { class: 'detail__actions' }, shareBtn, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'Group chat'), h('button', { class: 'btn btn--danger', type: 'button',
-      onClick: () => { run(leaveInvite(inv.id), cancel ? 'Invite cancelled.' : 'You left the meetup.'); closeModal(); } }, cancel ? 'Cancel invite' : 'Leave'));
+    const nextHost = isHost && !cancel ? getUser(inv.memberIds.find((uid) => uid !== me.id)!)!.name : '';
+    const askLeave = () => confirmDialog(cancel
+      ? { title: 'Cancel this invite?', body: `Your ${sport.name} invite on ${fmtWhen(inv.start, inv.end)} will be removed from the map, along with its group chat. This cannot be undone.`,
+          actions: [{ label: 'Keep invite' }, { label: 'Cancel invite', variant: 'danger', onClick: () => { run(leaveInvite(inv.id), 'Invite cancelled.'); closeModal(); } }] }
+      : { title: 'Leave this meetup?', body: `You will give up your spot at ${sport.name} on ${fmtWhen(inv.start, inv.end)}.${nextHost ? ` ${nextHost} will become the host.` : ''} You can join again later if there is still room.`,
+          actions: [{ label: 'Stay in' }, { label: 'Leave', variant: 'danger', onClick: () => { run(leaveInvite(inv.id), 'You left the meetup.'); closeModal(); } }] });
+    actions = h('div', { class: 'detail__actions' }, shareBtn, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'Group chat'),
+      h('button', { class: 'btn btn--danger', type: 'button', onClick: askLeave }, cancel ? 'Cancel invite' : 'Leave'));
   } else {
     const blocked = isFull(inv) || !canSee(inv, me.id);
     actions = h('div', { class: 'detail__actions' }, shareBtn, h('button', { class: 'btn btn--primary', type: 'button', disabled: blocked, dataset: { key: 'join' },

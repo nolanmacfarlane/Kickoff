@@ -5,7 +5,7 @@ import { uiIcon } from '../components/sportBits';
 import { seg, segMulti } from '../components/seg';
 import { SKILLS, sports, venues } from '../data';
 import { append, confirmDialog, go, h, iconButton, keepFocus, toast } from '../dom';
-import { createInvite, currentUser, getSport, getVenue, MAX_CAPACITY, MIN_CAPACITY } from '../state';
+import { conflictsFor, createInvite, currentUser, getSport, getVenue, MAX_CAPACITY, MIN_CAPACITY } from '../state';
 import type { InviteLocation, Skill, Venue, Vibe, Visibility } from '../types';
 import { openSportInfo } from './sportInfo';
 
@@ -71,6 +71,17 @@ export function render(): HTMLElement {
     go(`#/map/${res.id}`);
   }
 
+  // Overlap warning under the date and times. Built once and refreshed as the times change, so it shows straight away.
+  const conflictEl = h('div', { class: 'conflict-slot', role: 'status', 'aria-live': 'polite' });
+  function refreshConflict(): void {
+    const start = new Date(`${f.date}T${f.start}`).getTime(), end = new Date(`${f.date}T${f.end}`).getTime();
+    const clash = f.date && f.start && f.end && end > start ? conflictsFor(me.id, start, end) : [];
+    conflictEl.replaceChildren();
+    if (clash.length) append(conflictEl, [h('p', { class: 'field-warning' }, uiIcon('warning', 'icon icon--inline'),
+      h('span', {}, `This overlaps with ${describeConflicts(clash)}, which you are already going to. You can still create it.`))]);
+  }
+  const onTime = (key: 'date' | 'start' | 'end') => (e: Event) => { f[key] = (e.target as HTMLInputElement).value; refreshConflict(); };
+
   // Venue search sits under the map. The input and results are created once so typing never loses focus.
   let query = '';
   const results = h('div', { class: 'venue-results' });
@@ -130,9 +141,10 @@ export function render(): HTMLElement {
                   sports.map((s) => h('option', { value: s.id }, s.name))),
                 iconButton('help', `About ${getSport(f.sportId)!.name}`, () => openSportInfo(f.sportId), 'icon-btn--tight'))),
             h('div', { class: 'field-row' },
-              h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Date'), h('input', { class: 'input', type: 'date', value: f.date, min: dateStr(new Date()), dataset: { key: 'date' }, onChange: (e: Event) => { f.date = (e.target as HTMLInputElement).value; } })),
-              h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Starts'), h('input', { class: 'input', type: 'time', value: f.start, dataset: { key: 'start' }, onChange: (e: Event) => { f.start = (e.target as HTMLInputElement).value; } })),
-              h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Ends'), h('input', { class: 'input', type: 'time', value: f.end, dataset: { key: 'end' }, onChange: (e: Event) => { f.end = (e.target as HTMLInputElement).value; } }))),
+              h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Date'), h('input', { class: 'input', type: 'date', value: f.date, min: dateStr(new Date()), dataset: { key: 'date' }, onInput: onTime('date'), onChange: onTime('date') })),
+              h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Starts'), h('input', { class: 'input', type: 'time', value: f.start, dataset: { key: 'start' }, onInput: onTime('start'), onChange: onTime('start') })),
+              h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Ends'), h('input', { class: 'input', type: 'time', value: f.end, dataset: { key: 'end' }, onInput: onTime('end'), onChange: onTime('end') }))),
+            conflictEl,
             h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: f.recurring, dataset: { key: 'rec' }, onChange: (e: Event) => { f.recurring = (e.target as HTMLInputElement).checked; } }),
               h('span', { class: 'check__text' }, 'Repeat every week', h('small', {}, 'Good for an informal team or regular group.')))),
           h('section', { class: 'card' }, h('h2', {}, 'Who can join'),
@@ -160,5 +172,6 @@ export function render(): HTMLElement {
   }
 
   draw();
+  refreshConflict();
   return root;
 }

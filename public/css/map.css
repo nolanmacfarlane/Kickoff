@@ -84,3 +84,15 @@
 .legend-dot--friends { background: var(--primary); }
 .legend-dot--you { background: #2a7de1; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line-strong); }
 @media (max-width: 980px) { .map-legend { right: var(--s-3); bottom: calc(55% + var(--s-4)); } .map-page--closed .map-legend { bottom: var(--s-3); } }
+
+/* Floating invite card above a pin (shown when the list is hidden). The card brings its own background. */
+.map-pop { margin-bottom: 14px; }
+.map-pop .leaflet-popup-content-wrapper { padding: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); }
+.map-pop .leaflet-popup-content { margin: 0; font-size: var(--text-md); line-height: inherit; }
+.map-pop .leaflet-popup-content p { margin: 0; }   /* undo Leaflet's popup paragraph spacing */
+.map-pop .leaflet-popup-tip { background: var(--surface); box-shadow: none; border: 1px solid var(--line-strong); }
+.map-pop__body { display: grid; }
+.map-pop__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4); border-bottom: 1px solid var(--line); font-size: var(--text-sm); }
+.map-pop__cards { display: grid; gap: var(--s-2); max-height: min(420px, 50vh); overflow: auto; padding: var(--s-2); }
+.map-pop__cards .card { border: 0; box-shadow: none; padding: var(--s-3); }
+.map-pop__cards .card + .card { border-top: 1px solid var(--line); border-radius: 0; }

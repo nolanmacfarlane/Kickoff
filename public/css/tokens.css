@@ -20,6 +20,7 @@
 
   --good: #1f6f45;  --good-soft: #dff2e6;
   --bad: #a8321f;   --bad-soft: #fbe4df;
+  --warn: #8a4600;  --warn-soft: #fdead6;   /* heads-up, e.g. a time overlap (not yellow: that means "match") */
 
   /* stylized map */
   --water: #cfe5ec;
@@ -63,7 +64,7 @@
   --paper: #0f1a17; --surface: #172420; --line: #2a3a35; --line-strong: #44574f;
   --primary: #4fc3cc; --primary-hover: #7ad6dd; --primary-soft: #12363a; --on-primary: #06201f;
   --mark-soft: #4a3f0a;
-  --good: #6bd49b; --good-soft: #143826; --bad: #ff8a78; --bad-soft: #40201b;
+  --good: #6bd49b; --good-soft: #143826; --bad: #ff8a78; --bad-soft: #40201b; --warn: #ffb870; --warn-soft: #3d2912;
   --water: #1b2b30; --land: #1d2a25; --park: #223a2a; --road: #2e3f39; --road-edge: #3a4d46;
   --shadow-pop: 0 10px 30px rgba(0, 0, 0, 0.55);
 }

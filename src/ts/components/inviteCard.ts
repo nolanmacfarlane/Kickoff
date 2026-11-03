@@ -5,7 +5,7 @@ import { matchInvite, type MatchResult } from '../match';
 import { getSport, getUser, isFull, isPast } from '../state';
 import type { Invite, User } from '../types';
 import { joinInvite } from './joinFlow';
-import { sportLabel } from './sportBits';
+import { sportLabel, uiIcon } from './sportBits';
 
 /** All four levels collapse into one "All levels" tag. */
 export const skillLabels = (inv: Invite): string[] => (inv.skills.length === 4 ? ['All levels'] : inv.skills);
@@ -43,14 +43,13 @@ export function inviteCard(inv: Invite, user: User, o: CardOptions): HTMLElement
       h('div', { class: 'grow' },
         sportLabel(inv.sportId, { as: 'h3', className: 'card__title', onAbout: o.onAbout }),
         h('p', { class: 'rec-card__when' }, fmtWhen(inv.start, inv.end)),
-        h('p', { class: 'card__meta' }, `${inv.location.label}, ${distanceFrom(user, inv)} away`),
-        h('p', { class: 'card__meta' }, `Hosted by ${host.name}`)),
-      avatar(host, 'lg')),
+        h('p', { class: 'card__meta' }, `${inv.location.label}, ${distanceFrom(user, inv)} away`)),
+      h('div', { class: 'rec-card__host', title: `Host: ${host.name}` }, avatar(host), h('span', { class: 'rec-card__host-name' }, host.name))),
     inviteTags(inv, user, m, { hideSport: true }),
     h('div', { class: 'rec-card__foot' },
       h('span', { class: 'rec-card__spots' }, `${inv.memberIds.length}/${inv.capacity} going`),
       h('div', { class: 'row' },
-        o.onShowMap ? h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: o.onShowMap }, 'Show on map') : null,
         canJoin ? h('button', { class: 'btn btn--primary btn--sm', type: 'button', 'aria-label': `Join ${getSport(inv.sportId)!.name}`, onClick: () => joinInvite(inv.id) }, 'Join') : null,
+        o.onShowMap ? h('button', { class: 'icon-btn icon-btn--filled', type: 'button', 'aria-label': 'Show on map', title: 'Show on map', dataset: { key: `showmap-${inv.id}` }, onClick: o.onShowMap }, uiIcon('mapPin')) : null,
         iconButton('info', 'View details', o.onOpen, 'icon-btn--filled'))));
 }

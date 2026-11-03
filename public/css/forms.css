@@ -69,3 +69,8 @@ legend { padding: 0; font-weight: 600; font-size: var(--text-sm); margin-bottom:
 .search-option__text small { color: var(--ink-3); }
 .search-option__add { font-weight: 700; font-size: var(--text-sm); color: var(--primary); white-space: nowrap; }
 .search-popup__empty { padding: 12px; color: var(--ink-3); }
+
+/* Inline warning (e.g. the time overlaps another meetup). A heads-up, not an error: the form can still be sent. */
+.conflict-slot:empty { display: none; }
+.field-warning { display: flex; align-items: flex-start; gap: var(--s-2); padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--warn-soft); color: var(--warn); font-size: var(--text-sm); font-weight: 500; }
+.field-warning .icon { margin-top: 1px; }

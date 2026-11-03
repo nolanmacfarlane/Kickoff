@@ -24,6 +24,7 @@ export interface MapHandle {
   el: HTMLElement; map: L.Map;
   setPins: (pins: MapPin[], selectedId?: string | null) => void;
   focus: (id: string, bounce?: boolean) => void;    // centre on a pin and make it bounce
+  onSized: (fn: () => void) => void;                // run once the map has a real size on screen
 }
 
 const VICTORIA: LatLng = { lat: 48.4284, lng: -123.3656 };
@@ -125,5 +126,5 @@ export function mapWidget(o: MapOptions): MapHandle {
 
   if (o.onPick) map.on('click', (e: L.LeafletMouseEvent) => o.onPick!(Math.round(e.latlng.lat * 1e5) / 1e5, Math.round(e.latlng.lng * 1e5) / 1e5));
   setPins(o.pins, o.selectedId ?? null);
-  return { el, map, setPins, focus };
+  return { el, map, setPins, focus, onSized };
 }

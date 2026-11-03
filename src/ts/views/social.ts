@@ -3,7 +3,7 @@ import { friendsPlansList } from '../components/friendsPlans';
 import { socialNav } from '../components/socialNav';
 import { shareInvite } from '../components/share';
 import { sportLabel, uiIcon } from '../components/sportBits';
-import { avatar, fmtWhen, go, h, icon, toast } from '../dom';
+import { avatar, confirmDialog, fmtWhen, go, h, icon, toast } from '../dom';
 import {
   acceptFriendRequest, chatSummaries, currentUser, declineFriendRequest, directChatId, getSport, getUser, incomingRequests, markKindRead, meetupChatId, myUpcoming,
   outgoingRequests, unreadCount,
@@ -51,10 +51,12 @@ export function render(args: string[]): HTMLElement {
             incoming.map((r) => { const u = getUser(r.fromId)!;
               return h('li', { class: 'response response--unread' }, avatar(u, 'sm'), h('span', { class: 'grow' }, `${u.name} wants to be friends`),
                 h('button', { class: 'btn btn--primary btn--sm', type: 'button', onClick: () => { const x = acceptFriendRequest(r.id); toast(x.ok ? `You and ${u.name} are now friends.` : x.error); } }, 'Accept'),
-                h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => declineFriendRequest(r.id) }, 'Decline')); }),
+                h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => confirmDialog({ title: `Decline ${u.name}'s request?`, body: `${u.name} will not be told, but the request will be removed.`,
+                  actions: [{ label: 'Keep request' }, { label: 'Decline', variant: 'danger', onClick: () => declineFriendRequest(r.id) }] }) }, 'Decline')); }),
             outgoing.map((r) => { const u = getUser(r.toId)!;
               return h('li', { class: 'response' }, avatar(u, 'sm'), h('span', { class: 'grow' }, `Waiting for ${u.name}`),
-                h('button', { class: 'btn btn--text btn--sm', type: 'button', onClick: () => declineFriendRequest(r.id) }, 'Cancel')); }))
+                h('button', { class: 'btn btn--text btn--sm', type: 'button', onClick: () => confirmDialog({ title: 'Cancel friend request?', body: `Your request to ${u.name} will be withdrawn. You can send a new one later.`,
+                  actions: [{ label: 'Keep request' }, { label: 'Cancel request', variant: 'danger', onClick: () => declineFriendRequest(r.id) }] }) }, 'Cancel')); }))
             : h('div', { class: 'empty empty--tight' }, 'No pending requests. Find people on an invite and tap Add friend.')),
         h('section', {}, h('div', { class: 'section-head' }, h('h2', {}, 'Friends')),
           friends.length ? h('div', { class: 'friend-grid' }, friends.map((f) => h('div', { class: 'friend' }, avatar(f, 'lg'), h('span', {}, f.name),

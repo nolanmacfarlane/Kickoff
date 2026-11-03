@@ -30,3 +30,7 @@
 .friend-plan { display: flex; align-items: center; gap: var(--s-3); }
 .friend-plan__who { font-weight: 600; font-size: var(--text-sm); }
 .friend-plan__what { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--s-3); }
+
+/* Host: small avatar with the name underneath, top right of the card */
+.rec-card__host { display: grid; justify-items: center; gap: 2px; flex: none; max-width: 76px; text-align: center; }
+.rec-card__host-name { font-size: var(--text-xs); color: var(--ink-2); line-height: 1.2; overflow-wrap: anywhere; }
