@@ -133,7 +133,6 @@ export function render(): HTMLElement {
 
   function draw(scrollToError = false): void {
     keepFocus(() => { root.replaceChildren(); append(root, [
-      error ? h('p', { class: 'notice notice--error form-error', role: 'alert', id: 'form-error' }, error) : null,
       h('div', { class: 'cols cols--create' },
         h('div', { class: 'create-form' },
           h('section', { class: 'card' }, h('h2', {}, 'What and when'),
@@ -167,6 +166,7 @@ export function render(): HTMLElement {
               h('textarea', { class: 'textarea', value: f.notes, placeholder: 'Anything people should know before they come', dataset: { key: 'notes' }, onInput: (e: Event) => { f.notes = (e.target as HTMLTextAreaElement).value; } })))),
         where(),
         h('div', { class: 'create-actions' },
+          error ? h('p', { class: 'notice notice--error form-error', role: 'alert', id: 'form-error' }, error) : null,   // just above the buttons
           h('button', { class: 'btn btn--primary', type: 'button', onClick: () => submit() }, 'Create invite'),
           h('a', { class: 'btn btn--secondary', href: '#/home' }, 'Cancel'))),
     ]);

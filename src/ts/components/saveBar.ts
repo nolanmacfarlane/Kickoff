@@ -15,12 +15,12 @@ export const unsavedMark = (show = false): HTMLElement => h('span', { class: 'un
 export function saveBar(o: { section: string; isDirty: () => boolean; onSave: () => void; onDiscard: () => void }): SaveBar {
   const errorEl = h('p', { class: 'save-bar__error', role: 'alert', hidden: true });
   const el = h('div', { class: 'save-bar', role: 'region', 'aria-label': 'Unsaved changes', hidden: true },
+    errorEl,   // above the buttons
     h('div', { class: 'save-bar__row' },
       h('p', { class: 'save-bar__msg', role: 'status' }, h('span', { class: 'save-bar__dot', 'aria-hidden': 'true' }), 'You have unsaved changes'),
       h('div', { class: 'save-bar__actions' },
         h('button', { class: 'btn btn--secondary btn--sm', type: 'button', dataset: { key: 'discard' }, onClick: o.onDiscard }, 'Discard'),
-        h('button', { class: 'btn btn--primary btn--sm', type: 'button', dataset: { key: 'save' }, onClick: o.onSave }, 'Save changes'))),
-    errorEl);
+        h('button', { class: 'btn btn--primary btn--sm', type: 'button', dataset: { key: 'save' }, onClick: o.onSave }, 'Save changes'))));
 
   let first = true;
   function refresh(): void {
