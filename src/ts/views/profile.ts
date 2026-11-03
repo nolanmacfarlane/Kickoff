@@ -119,9 +119,9 @@ export function render(args: string[]): HTMLElement {
   else if (section === 'activity') {
     const up = myUpcoming(me.id), past = myPast(me.id), log = activityFor(me.id);
     content = h('div', { class: 'stack' },
-      h('section', {}, h('h2', {}, 'Upcoming'), up.length ? h('div', { class: 'card-list' }, up.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'Nothing planned.')),
-      h('section', {}, h('h2', {}, 'Past meetups'), past.length ? h('div', { class: 'card-list' }, past.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'No past meetups yet.')),
-      h('section', {}, h('h2', {}, 'History'), log.length ? h('ul', { class: 'card activity-list' }, log.map((a) => h('li', {}, h('span', {}, a.text), h('time', {}, fmtAgo(a.at))))) : h('div', { class: 'empty empty--tight' }, 'No activity yet.'),
+      h('section', {}, h('div', { class: 'section-head' }, h('h2', {}, 'Upcoming')), up.length ? h('div', { class: 'card-list' }, up.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'Nothing planned.')),
+      h('section', {}, h('div', { class: 'section-head' }, h('h2', {}, 'Past meetups')), past.length ? h('div', { class: 'card-list' }, past.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'No past meetups yet.')),
+      h('section', {}, h('div', { class: 'section-head' }, h('h2', {}, 'History')), log.length ? h('ul', { class: 'card activity-list' }, log.map((a) => h('li', {}, h('span', {}, a.text), h('time', {}, fmtAgo(a.at))))) : h('div', { class: 'empty empty--tight' }, 'No activity yet.'),
         log.length ? h('div', { class: 'activity-export' }, h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => exportHistory(me.name, log) }, 'Export history')) : null));
   } else content = h('div', { class: 'card stack' }, h('h2', {}, 'About us'), h('p', {}, 'Kickoff helps people play sports together on short notice, or plan ahead. This is a course prototype with made-up data.'),
     h('p', { class: 'muted' }, 'Sport icons by Phosphor Icons (MIT licence). Map data from OpenStreetMap contributors, map tiles by CARTO, map library Leaflet.'));

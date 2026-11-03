@@ -132,8 +132,8 @@ export function sportsField(d: ProfileDraft, redraw: () => void, onAbout: (sport
 
   const added = sports.filter((s) => s.id in d.sports);
   return h('div', { class: 'stack' },
-    h('div', {}, h('h3', {}, 'Add a sport'), h('div', { class: 'search-field' }, uiIcon('search'), input, popup)),
-    h('div', {}, h('h3', {}, 'Your sports'),
+    h('div', { class: 'stack-sm' }, h('h3', {}, 'Add a sport'), h('div', { class: 'search-field' }, uiIcon('search'), input, popup)),
+    h('div', { class: added.length ? '' : 'stack-sm' }, h('h3', {}, 'Your sports'),
       added.length ? h('ul', { class: 'sport-list' }, added.map((s) => h('li', { class: 'sport-row' }, info(s), controls(s))))
         : h('div', { class: 'empty empty--tight' }, 'No sports yet. Search above to add one.')));
 }
