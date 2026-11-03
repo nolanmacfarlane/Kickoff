@@ -161,7 +161,7 @@ export function render(args: string[]): HTMLElement {
           filters.sport !== 'all' ? iconButton('help', `About ${getSport(filters.sport)!.name}`, () => openSportInfo(filters.sport), 'icon-btn--on-map') : null),
         filterSelect('Time', 'time', [['any', 'Any time'], ['today', 'Today'], ['tomorrow', 'Tomorrow'], ['thisweek', 'This week'], ['week', 'Next 7 days']]),
         filterSelect('Distance', 'distance', (['any', ...Object.keys(DISTANCES.km)] as MaxDistance[]).map((d): [string, string] => [d, distanceLabel(d, me.settings.units)])),
-        filterSelect('Gear', 'gear', [['any', 'Gear: any'], ['shared', 'Gear shared']]),
+        filterSelect('Gear', 'gear', [['any', 'Gear: any'], ['shared', 'Gear: shared']]),
         active ? h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => { resetFilters(); clearSelection(); } }, 'Clear filters') : null]);
       sideEl.replaceChildren();
       append(sideEl, ordered.length ? [
