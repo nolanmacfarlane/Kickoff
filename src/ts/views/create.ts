@@ -1,9 +1,10 @@
 // Create invite. Required: sport, location, capacity, time, at least one skill level. Everything else is optional.
 import { mapWidget, type MapPin } from '../components/mapWidget';
+import { describeConflicts } from '../components/joinFlow';
 import { uiIcon } from '../components/sportBits';
 import { seg, segMulti } from '../components/seg';
 import { SKILLS, sports, venues } from '../data';
-import { append, go, h, iconButton, keepFocus, toast } from '../dom';
+import { append, confirmDialog, go, h, iconButton, keepFocus, toast } from '../dom';
 import { createInvite, currentUser, getSport, getVenue, MAX_CAPACITY, MIN_CAPACITY } from '../state';
 import type { InviteLocation, Skill, Venue, Vibe, Visibility } from '../types';
 import { openSportInfo } from './sportInfo';
@@ -49,13 +50,21 @@ export function render(): HTMLElement {
     onPick: (lat, lng) => { f.location = { label: f.spotName.trim() || 'Custom pin', lat, lng }; draw(); },
   });
 
-  function submit(): void {
+  function submit(force = false): void {
     if (!f.date || !f.start || !f.end) { error = 'Choose a date, a start time and an end time.'; return draw(true); }
     const res = createInvite({
       sportId: f.sportId, location: f.location as InviteLocation, start: new Date(`${f.date}T${f.start}`).getTime(), end: new Date(`${f.date}T${f.end}`).getTime(),
       capacity: f.capacity, skills: f.skills, vibe: f.vibe, visibility: f.visibility,
       gear: { available: f.gearOn, description: f.gearText.trim() }, notes: f.notes.trim(), recurring: f.recurring,
-    });
+    }, Date.now(), force);
+    if (!res.ok && res.conflicts?.length) {
+      confirmDialog({
+        title: 'This overlaps with another meetup',
+        body: `You are already going to ${describeConflicts(res.conflicts)}. Create this invite anyway?`,
+        actions: [{ label: 'Go back and change the time' }, { label: 'Create anyway', variant: 'primary', onClick: () => submit(true) }],
+      });
+      return;
+    }
     if (!res.ok) { error = res.error; return draw(true); }
     form = null; error = '';
     toast('Invite created. It is now on the map.');
@@ -143,7 +152,7 @@ export function render(): HTMLElement {
               h('textarea', { class: 'textarea', value: f.notes, placeholder: 'Anything people should know before they come', dataset: { key: 'notes' }, onInput: (e: Event) => { f.notes = (e.target as HTMLTextAreaElement).value; } })))),
         where(),
         h('div', { class: 'create-actions' },
-          h('button', { class: 'btn btn--primary', type: 'button', onClick: submit }, 'Create invite'),
+          h('button', { class: 'btn btn--primary', type: 'button', onClick: () => submit() }, 'Create invite'),
           h('a', { class: 'btn btn--secondary', href: '#/home' }, 'Cancel'))),
     ]);
     handle.map.invalidateSize(); });

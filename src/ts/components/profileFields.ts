@@ -1,5 +1,5 @@
 // Profile inputs shared by onboarding and the Profile tab. They edit a draft object, then call redraw().
-import { geocode, motivationOptions, sampleCalendar, SKILLS, sports } from '../data';
+import { geocode, motivationOptions, sampleCalendar, SKILLS, sportMatches, sports } from '../data';
 import { append, h, iconButton } from '../dom';
 import type { BusyBlock, Motivation, Skill, Sport, User } from '../types';
 import { toggleBox } from './seg';
@@ -56,7 +56,7 @@ export const pendingSports = (d: ProfileDraft): string[] =>
 let comboId = 0;
 
 /**
- * Add, then one dropdown. Search for a sport in a type-ahead box: matches float directly under the box (they do
+ * Add, then one dropdown. Search for a sport (by name or another name people use, like "biking") in a type-ahead box: matches float directly under the box (they do
  * not push the page around, like LinkedIn's skill search). Choose one to add it to "Your sports", where a level
  * dropdown (Want to try, or a skill level) and an x button live. Nothing is listed until you type.
  */
@@ -109,7 +109,7 @@ export function sportsField(d: ProfileDraft, redraw: () => void, onAbout: (sport
     const q = (queries.get(d) ?? '').trim().toLowerCase();
     popup.replaceChildren(); matches = []; active = -1;
     if (!q) { close(); return; }                              // nothing is listed until the person types
-    matches = sports.filter((s) => !(s.id in d.sports) && (s.name.toLowerCase().includes(q) || s.tagline.toLowerCase().includes(q)));
+    matches = sports.filter((s) => !(s.id in d.sports) && sportMatches(s, q));
     popup.hidden = false; input.setAttribute('aria-expanded', 'true');
     if (!matches.length) { append(popup, [h('div', { class: 'search-popup__empty' }, 'No sports match your search.')]); return; }
     append(popup, matches.map((s, i) => h('div', {

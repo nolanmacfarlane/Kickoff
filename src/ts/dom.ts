@@ -133,7 +133,7 @@ let dialogReturn: HTMLElement | null = null;
 
 export function closeDialog(): void { dialog?.remove(); dialog = null; dialogReturn?.focus?.(); dialogReturn = null; }
 /** Safest action first (it gets focus). */
-export function confirmDialog(o: { title: string; body: string; actions: DialogAction[] }): void {
+export function confirmDialog(o: { title: string; body: string | Node; actions: DialogAction[] }): void {
   closeDialog();
   dialogReturn = document.activeElement as HTMLElement | null;
   const buttons = o.actions.map((a, i) => h('button', {
@@ -141,7 +141,7 @@ export function confirmDialog(o: { title: string; body: string; actions: DialogA
     onClick: () => { closeDialog(); a.onClick?.(); },
   }, a.label));
   const box = h('div', { class: 'modal modal--small', role: 'alertdialog', 'aria-modal': 'true', 'aria-labelledby': 'dlg-title', 'aria-describedby': 'dlg-body' },
-    h('div', { class: 'modal__scroll stack' }, h('h2', { id: 'dlg-title' }, o.title), h('p', { id: 'dlg-body' }, o.body), h('div', { class: 'dialog__actions' }, buttons)));
+    h('div', { class: 'modal__scroll stack' }, h('h2', { id: 'dlg-title' }, o.title), typeof o.body === 'string' ? h('p', { id: 'dlg-body' }, o.body) : h('div', { id: 'dlg-body' }, o.body), h('div', { class: 'dialog__actions' }, buttons)));
   dialog = h('div', { class: 'modal-backdrop modal-backdrop--top' }, box);
   document.getElementById('modal-root')!.append(dialog);
   buttons[0]?.focus();

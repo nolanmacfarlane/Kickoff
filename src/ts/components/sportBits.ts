@@ -13,7 +13,7 @@ function phosphor(markup: string, cls: string): SVGElement {
   return svg;
 }
 export const sportIcon = (sportId: string, cls = 'sport-icon'): SVGElement => phosphor(SPORT_ICONS[sportId] ?? SPORT_ICONS.soccer, cls);
-export const uiIcon = (name: 'chat' | 'send' | 'search', cls = 'icon'): SVGElement => phosphor(UI_ICONS[name], cls);
+export const uiIcon = (name: 'chat' | 'send' | 'search' | 'share' | 'list', cls = 'icon'): SVGElement => phosphor(UI_ICONS[name], cls);
 
 /** <span class="sport-label"> [icon] Soccer [?] </span>. Pass onAbout to show the ? button right next to the name. */
 export function sportLabel(sportId: string, o: { onAbout?: () => void; as?: 'h2' | 'h3' | 'strong' | 'span'; icon?: boolean; className?: string } = {}): HTMLElement {

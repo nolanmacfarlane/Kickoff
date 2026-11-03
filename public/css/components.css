@@ -117,3 +117,5 @@
 .icon-btn .icon--inline { width: 24px; height: 24px; }
 
 .empty--tight { padding: var(--s-4); font-size: var(--text-sm); }
+
+.tag--going { background: var(--good); border-color: var(--good); color: var(--on-ink); }

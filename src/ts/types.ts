@@ -15,7 +15,7 @@ export interface BusyBlock { day: number; startHour: number; endHour: number; la
 export interface Settings {
   theme: 'light' | 'dark';
   units: 'km' | 'mi';
-  notify: { joins: boolean; leaves: boolean; friends: boolean; messages: boolean };
+  notify: { joins: boolean; leaves: boolean; friends: boolean; messages: boolean; friendInvites: boolean };
 }
 
 export interface User {
@@ -45,9 +45,10 @@ export interface Sport {
   soloFriendly: boolean;        // can be done individually, but invites still make it social
   motivations: Motivation[];
   gear: GearItem[];             // only gear a newcomer would not assume
+  aliases: string[];            // other names people search for ("biking" finds Cycling)
 }
 
-export type VenueKind = 'gym' | 'park' | 'field' | 'court' | 'cages' | 'trail';
+export type VenueKind = 'gym' | 'park' | 'field' | 'court' | 'cages' | 'trail' | 'course' | 'pool';
 
 export interface Venue extends LatLng {
   id: string;
@@ -82,7 +83,7 @@ export interface Invite {
   recurring: boolean;           // weekly, for informal teams
 }
 
-export type NotificationKind = 'join' | 'leave' | 'friend' | 'other';
+export type NotificationKind = 'join' | 'leave' | 'friend' | 'friendInvite' | 'other';
 
 export interface Notification {
   id: string;
@@ -114,7 +115,8 @@ export interface AppState {
   chatReads: Record<string, Record<string, number>>;   // userId -> chatId -> time last read
 }
 
-export type Result = { ok: true; id?: string } | { ok: false; error: string };
+/** conflicts: your other meetups that overlap in time. The caller may ask the person and try again with force. */
+export type Result = { ok: true; id?: string } | { ok: false; error: string; conflicts?: Invite[] };
 
 export type NewInviteInput = Omit<Invite, 'id' | 'hostId' | 'memberIds'>;
 export type TagEdit = Partial<Pick<Invite, 'skills' | 'vibe' | 'visibility'>>;

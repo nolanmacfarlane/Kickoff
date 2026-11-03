@@ -1,6 +1,7 @@
 // Map tab: a full-page Leaflet map with floating filters (top left) and floating invite cards (right).
 // Invites at the same place share one pin with a count. Selecting it lists those invites first.
 import { inviteCard } from '../components/inviteCard';
+import { uiIcon } from '../components/sportBits';
 import { mapWidget } from '../components/mapWidget';
 import { groupInvites, groupKey, groupPins, type PinGroup } from '../components/pinGroups';
 import { sports } from '../data';
@@ -12,6 +13,7 @@ import { openSportInfo } from './sportInfo';
 
 const filters = { sport: 'all', time: 'any', gear: 'any' };   // survives re-renders and tab switches
 const DAY = 86_400_000;
+let listOpen = true;                                          // is the invites panel showing? (kept while you move between tabs)
 
 function passesTime(inv: Invite): boolean {
   const start = new Date(); start.setHours(0, 0, 0, 0);
@@ -58,7 +60,19 @@ export function render(args: string[]): HTMLElement {
       update();
     },
   });
-  const stage = h('div', { class: 'map-page' }, handle.el, filtersEl, legend, sideEl);
+  // The panel holds the filters (top) and the invite cards (below). A button on the map shows or hides the whole panel.
+  const panel = h('aside', { class: 'map-panel', id: 'map-panel', 'aria-label': 'Filters and invites' }, filtersEl, sideEl);
+  const toggle = h('button', { class: 'btn btn--secondary map-list-toggle', type: 'button', 'aria-controls': 'map-panel', dataset: { key: 'map-list-toggle' },
+    onClick: () => { listOpen = !listOpen; applyOpen(); } });
+  const stage = h('div', { class: 'map-page' }, handle.el, legend, toggle, panel);
+  function applyOpen(): void {
+    stage.classList.toggle('map-page--closed', !listOpen);
+    panel.hidden = !listOpen;
+    toggle.setAttribute('aria-expanded', String(listOpen));
+    toggle.replaceChildren(uiIcon('list', 'icon icon--inline'), listOpen ? 'Hide list' : 'Show list');
+    handle.map.invalidateSize();
+  }
+  applyOpen();
 
   function filterSelect(label: string, key: 'sport' | 'time' | 'gear', opts: [string, string][]): HTMLElement {
     return h('select', { class: 'select', value: filters[key], 'aria-label': label, dataset: { key: `f-${key}` },

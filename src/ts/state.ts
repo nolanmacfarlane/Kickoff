@@ -50,6 +50,7 @@ function wants(user: User | undefined, kind: NotificationKind): boolean {
   if (kind === 'join') return user.settings.notify.joins;
   if (kind === 'leave') return user.settings.notify.leaves;
   if (kind === 'friend') return user.settings.notify.friends;
+  if (kind === 'friendInvite') return user.settings.notify.friendInvites;
   return true;
 }
 /** Respects the recipient's notification settings. */
@@ -201,7 +202,12 @@ export function updateSettings(patch: SettingsPatch): Result {
 
 // ---------- invite actions ----------
 
-export function createInvite(input: NewInviteInput, now = Date.now()): Result {
+/** Your other upcoming meetups that overlap this time (back-to-back is fine). */
+export function conflictsFor(userId: string, start: number, end: number, ignoreInviteId?: string, now = Date.now()): Invite[] {
+  return st.invites.filter((i) => i.id !== ignoreInviteId && i.memberIds.includes(userId) && !isPast(i, now) && i.start < end && start < i.end).sort((a, b) => a.start - b.start);
+}
+
+export function createInvite(input: NewInviteInput, now = Date.now(), force = false): Result {
   const me = currentUser();
   if (!me) return fail('Not signed in.');
   if (!getSport(input.sportId)) return fail('Choose a sport.');
@@ -212,14 +218,17 @@ export function createInvite(input: NewInviteInput, now = Date.now()): Result {
   if (!(input.start > now)) return fail('Start time must be in the future.');
   if (!(input.end > input.start)) return fail('End time must be after the start time.');
   if (input.gear.available && !input.gear.description.trim()) return fail('Describe the gear you can share, or untick the box.');
+  const clash = conflictsFor(me.id, input.start, input.end, undefined, now);
+  if (clash.length && !force) return { ok: false, error: 'This overlaps with a meetup you are already going to.', conflicts: clash };
   const inv: Invite = { ...input, id: nid('i'), hostId: me.id, memberIds: [me.id] };
   st.invites.push(inv);
+  me.friendIds.forEach((fid) => notify(fid, inv.id, `${me.name} created a ${getSport(inv.sportId)!.name} meetup`, now, 'friendInvite'));
   log(me.id, `You created a ${getSport(inv.sportId)!.name} invite at ${inv.location.label}`, now, inv.id);
   emit();
   return ok(inv.id);
 }
 
-export function acceptInvite(inviteId: string, now = Date.now()): Result {
+export function acceptInvite(inviteId: string, now = Date.now(), force = false): Result {
   const me = currentUser();
   const inv = getInvite(inviteId);
   if (!me) return fail('Not signed in.');
@@ -228,6 +237,8 @@ export function acceptInvite(inviteId: string, now = Date.now()): Result {
   if (inv.memberIds.includes(me.id)) return fail('You already joined this invite.');
   if (!canSee(inv, me.id)) return fail('This invite is for the host\'s friends only.');
   if (isFull(inv)) return fail('This invite is full.');
+  const clash = conflictsFor(me.id, inv.start, inv.end, inv.id, now);
+  if (clash.length && !force) return { ok: false, error: 'This overlaps with a meetup you are already going to.', conflicts: clash };
   inv.memberIds.push(me.id);
   const sport = getSport(inv.sportId)!.name;
   inv.memberIds.filter((id) => id !== me.id).forEach((id) => notify(id, inv.id, `${me.name} joined your ${sport} meetup`, now, 'join'));
@@ -370,12 +381,12 @@ export function markInviteRead(inviteId: string): void {
   st.notifications.forEach((n) => { if (n.userId === me.id && n.inviteId === inviteId) n.read = true; });
   emit();
 }
-/** Marks one kind of notification as read (e.g. friend requests when the Social tab is opened). No re-render if there is nothing to mark. */
-export function markKindRead(kind: NotificationKind): void {
+/** Marks some kinds of notification as read (e.g. friend requests when the Social tab is opened). No re-render if there is nothing to mark. */
+export function markKindRead(...kinds: NotificationKind[]): void {
   const me = currentUser();
   if (!me) return;
   let changed = false;
-  st.notifications.forEach((n) => { if (n.userId === me.id && n.kind === kind && !n.read) { n.read = true; changed = true; } });
+  st.notifications.forEach((n) => { if (n.userId === me.id && kinds.includes(n.kind) && !n.read) { n.read = true; changed = true; } });
   if (changed) emit();
 }
 export function markAllRead(): void {

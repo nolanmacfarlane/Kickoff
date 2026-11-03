@@ -1,10 +1,11 @@
 // Social tab, Overview: my meetups (group chat + details), friend requests, friends' plans, friends. Messages is its own view.
 import { friendsPlansList } from '../components/friendsPlans';
 import { socialNav } from '../components/socialNav';
+import { shareInvite } from '../components/share';
 import { sportLabel, uiIcon } from '../components/sportBits';
 import { avatar, fmtWhen, go, h, icon, toast } from '../dom';
 import {
-  acceptFriendRequest, chatSummaries, currentUser, declineFriendRequest, directChatId, getUser, incomingRequests, markKindRead, meetupChatId, myUpcoming,
+  acceptFriendRequest, chatSummaries, currentUser, declineFriendRequest, directChatId, getSport, getUser, incomingRequests, markKindRead, meetupChatId, myUpcoming,
   outgoingRequests, unreadCount,
 } from '../state';
 import { openInvite } from './inviteDetail';
@@ -18,7 +19,7 @@ export function render(args: string[]): HTMLElement {
   const friends = me.friendIds.map((id) => getUser(id)!);
   const incoming = incomingRequests(me.id);
   const outgoing = outgoingRequests(me.id);
-  setTimeout(() => markKindRead('friend'), 0);   // friend requests are shown on this screen, so they count as seen
+  setTimeout(() => markKindRead('friend', 'friendInvite'), 0);   // requests and friends' new plans are shown on this screen, so they count as seen
   const chatUnread = new Map(chatSummaries(me.id).map((c) => [c.id, c.unread]));
 
   const meetupRow = (i: (typeof upcoming)[number]) => {
@@ -28,6 +29,7 @@ export function render(args: string[]): HTMLElement {
       h('div', { class: 'grow' }, sportLabel(i.sportId, { as: 'h3', className: 'card__title', onAbout: () => openSportInfo(i.sportId) }),
         h('p', { class: 'card__meta' }, fmtWhen(i.start, i.end)), h('p', { class: 'card__meta' }, `${i.location.label}, ${i.memberIds.length}/${i.capacity} going`)),
       h('div', { class: 'avatar-stack' }, i.memberIds.slice(0, 4).map((id) => avatar(getUser(id)!, 'sm'))),
+      h('button', { class: 'icon-btn icon-btn--filled', type: 'button', 'aria-label': `Share ${getSport(i.sportId)!.name}`, title: 'Share', onClick: () => shareInvite(i.id) }, uiIcon('share')),
       h('span', { class: 'icon-badge' },
         h('button', { class: 'icon-btn icon-btn--filled', type: 'button', 'aria-label': chatN ? `Group chat, ${chatN} unread` : 'Group chat', title: 'Group chat', onClick: () => go(`#/social/messages/${meetupChatId(i.id)}`) }, uiIcon('chat')),
         chatN ? h('span', { class: 'badge', 'aria-hidden': 'true' }, String(chatN)) : null),

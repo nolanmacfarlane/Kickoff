@@ -2,11 +2,13 @@
 import { distanceFrom, inviteTags } from '../components/inviteCard';
 import { seg, segMulti } from '../components/seg';
 import { SKILLS } from '../data';
+import { joinInvite } from '../components/joinFlow';
+import { shareInvite } from '../components/share';
 import { sportLabel, uiIcon } from '../components/sportBits';
 import { avatar, closeModal, fmtWhen, go, h, openModal, tag, toast } from '../dom';
 import { matchInvite } from '../match';
 import {
-  acceptFriendRequest, acceptInvite, canSee, currentUser, editInviteTags, friendStatus, getInvite, getSport, getUser, getVenue,
+  acceptFriendRequest, canSee, currentUser, editInviteTags, friendStatus, getInvite, getSport, getUser, getVenue,
   isFull, isPast, leaveInvite, markInviteRead, meetupChatId, requestFrom, sendFriendRequest, spotsLeft, tagsLocked, unreadCount,
 } from '../state';
 import type { Skill, Vibe, Visibility } from '../types';
@@ -67,17 +69,18 @@ function view(id: string): HTMLElement | null {
       friendControl(uid));
   });
 
+  const shareBtn = h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => shareInvite(inv.id) }, uiIcon('share', 'icon icon--inline'), 'Share');
   let actions: HTMLElement;
   if (past) actions = h('div', { class: 'stack-sm' }, h('p', { class: 'notice' }, 'This meetup has already happened.'),
     isMember ? h('div', { class: 'detail__actions' }, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'View chat')) : null);
   else if (isMember) {
     const cancel = isHost && inv.memberIds.length === 1;
-    actions = h('div', { class: 'detail__actions' }, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'Group chat'), h('button', { class: 'btn btn--danger', type: 'button',
+    actions = h('div', { class: 'detail__actions' }, shareBtn, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'Group chat'), h('button', { class: 'btn btn--danger', type: 'button',
       onClick: () => { run(leaveInvite(inv.id), cancel ? 'Invite cancelled.' : 'You left the meetup.'); closeModal(); } }, cancel ? 'Cancel invite' : 'Leave'));
   } else {
     const blocked = isFull(inv) || !canSee(inv, me.id);
-    actions = h('div', { class: 'detail__actions' }, h('button', { class: 'btn btn--primary', type: 'button', disabled: blocked, dataset: { key: 'join' },
-      onClick: () => run(acceptInvite(inv.id), 'You are in. The host and other members have been told.') }, isFull(inv) ? 'Full' : 'Join'));
+    actions = h('div', { class: 'detail__actions' }, shareBtn, h('button', { class: 'btn btn--primary', type: 'button', disabled: blocked, dataset: { key: 'join' },
+      onClick: () => joinInvite(inv.id) }, isFull(inv) ? 'Full' : 'Join'));
   }
 
   return h('div', { class: 'detail' },

@@ -52,7 +52,7 @@ function profileEditor(): HTMLElement {
 function personalization(): HTMLElement {
   const me = currentUser()!;
   const s = me.settings;
-  const toggle = (key: 'joins' | 'leaves' | 'friends' | 'messages', label: string, hint: string) =>
+  const toggle = (key: 'joins' | 'leaves' | 'friends' | 'messages' | 'friendInvites', label: string, hint: string) =>
     h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: s.notify[key], dataset: { key: `notify-${key}` }, onChange: (e: Event) => { updateSettings({ notify: { [key]: (e.target as HTMLInputElement).checked } }); } }),
       h('span', { class: 'check__text' }, label, h('small', {}, hint)));
   return h('div', { class: 'stack' },
@@ -66,6 +66,7 @@ function personalization(): HTMLElement {
       toggle('joins', 'Someone joins my meetup', 'Includes when a meetup fills up.'),
       toggle('leaves', 'Someone leaves my meetup', 'Changes apply straight away.'),
       toggle('friends', 'Friend requests', 'New requests and when yours is accepted.'),
+      toggle('friendInvites', 'Friends create an invite', 'When a friend starts a meetup you can see.'),
       toggle('messages', 'New messages', 'Counts unread chats in the Social tab badge.')));
 }
 
