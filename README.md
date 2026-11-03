@@ -34,7 +34,7 @@ Suggestions are scored in [src/ts/match.ts](src/ts/match.ts). An invite gets poi
 You need [Node.js](https://nodejs.org/) 18 or newer.
 
 ```sh
-git clone <this repo>
+git clone https://github.com/nolanmacfarlane/Kickoff.git
 cd Kickoff
 npm install
 
