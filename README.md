@@ -1,6 +1,6 @@
 # Kickoff
 
-**Spontaneous sports meetups.** Kickoff helps people who want to learn a sport, or get back into one, find a casual game nearby and join it with one tap. You can also post an invite yourself and let others join.
+**Spontaneous sports invites.** Kickoff helps people who want to learn a sport, or get back into one, find a casual game nearby and join it with one tap. You can also post an invite yourself and let others join.
 
 This is a medium-fidelity prototype built for a Human-Computer Interaction course by **Nolan MacFarlane, Daniaal Mahmood, Sriram Palavajjhala and David Gromadzki**. The design comes from a preliminary user study with six people who wanted to learn or return to sports, and was shaped by usability heuristics and HCI design principles.
 
@@ -13,7 +13,7 @@ This is a medium-fidelity prototype built for a Human-Computer Interaction cours
 - **Map.** A full-screen map of open invites with filters. Invites at the same venue share one pin with a count.
 - **Create invite.** Pick a sport, place, time, capacity and skill levels. Vibe (casual or competitive), visibility (open or friends only) and gear notes are optional. Your usual choices can be saved as defaults.
 - **Invite details.** Join instantly, leave, see who's going, share the invite, chat with the group, or show it on the map.
-- **Social.** Your meetups, what friends are going to, friend requests, your friends list, and messages (direct chats plus one group chat per meetup).
+- **Social.** Your invites, what friends are going to, friend requests, your friends list, and messages (direct chats plus one group chat per invite).
 - **Profile.** Edit your onboarding answers. Settings cover theme (system, light or dark), 12- or 24-hour time, the first day of the week, km or miles, how far away invites can be, where the map opens, default invite details, and which notifications you get.
 - **Help.** An "About this sport" page for each of the 15 sports. Open it from the **(?)** next to any sport name.
 
@@ -23,7 +23,7 @@ This is a medium-fidelity prototype built for a Human-Computer Interaction cours
 - **Friends-only** invites can only be seen by the host's friends and by people already going.
 - The host can change an invite's skill levels, vibe and visibility **only until someone else joins**. After that the tags are locked so nobody's expectations change after they sign up.
 - If the host leaves, the **earliest joiner becomes the host**. If everyone leaves, the invite and its chat are deleted.
-- When you join or create an invite that **overlaps** with another meetup you're going to, you're asked to confirm first.
+- When you join or create an invite that **overlaps** with another invite you're going to, you're asked to confirm first.
 
 ### How suggestions are ranked
 

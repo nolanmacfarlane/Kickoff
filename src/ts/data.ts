@@ -123,7 +123,7 @@ export const motivationOptions: { id: Motivation; label: string; hint: string }[
   { id: 'learn', label: 'Learn', hint: 'Try something new' },
 ];
 
-/** Free-time chips. Hours are [from, to) by start time of the meetup. */
+/** Free-time chips. Hours are [from, to) by start time of the invite. */
 export const freeTimeOptions: { id: FreeTime; weekend: boolean; label: string; from: number; to: number }[] = [
   { id: 'weekday-morning', weekend: false, label: 'Mornings', from: 6, to: 12 },
   { id: 'weekday-afternoon', weekend: false, label: 'Afternoons', from: 12, to: 17 },

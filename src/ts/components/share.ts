@@ -14,5 +14,5 @@ export function shareInvite(inviteId: string): void {
       h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: done('Link copied (demo only).') }, 'Copy link')),
     h('div', { class: 'share-grid' }, PLATFORMS.map((p) => h('button', { class: 'btn btn--secondary', type: 'button', onClick: done(`Demo only: this would share to ${p}.`) }, p))),
     h('p', { class: 'muted' }, 'Demo only: nothing is actually sent.'));
-  confirmDialog({ title: 'Share this meetup', body, actions: [{ label: 'Close' }] });
+  confirmDialog({ title: 'Share this invite', body, actions: [{ label: 'Close' }] });
 }

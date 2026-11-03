@@ -4,7 +4,7 @@
 // The signed-in user gets a toast for each (unless they turned that notification off).
 // Only reacts to things done after the app starts; seeded requests and invites are left alone.
 import {
-  acceptFriendRequestAs, acceptInviteAs, canSee, currentUser, getInvite, getSport, getUser, getState, isFull, isPast, meetupChatId, outgoingRequests, sendMessageAs, subscribe,
+  acceptFriendRequestAs, acceptInviteAs, canSee, currentUser, getInvite, getSport, getUser, getState, isFull, isPast, inviteChatId, outgoingRequests, sendMessageAs, subscribe,
 } from './state';
 import { toast } from './dom';
 import type { Invite } from './types';
@@ -43,8 +43,8 @@ function scheduleJoins(inviteId: string, humanId: string): void {
       if (!live || isFull(live) || isPast(live)) return;   // deleted, filled or over in the meantime
       if (!acceptInviteAs(botId, inviteId, Date.now(), true).ok) return;
       const host = currentUser();
-      if (host?.id === live.hostId && host.settings.notify.joins) toast(`${getUser(botId)!.name} joined your ${getSport(live.sportId)!.name} meetup${isFull(live) ? '. It is now full' : ''}`);
-      setTimeout(() => sendMessageAs(botId, meetupChatId(inviteId), lines[n % lines.length]), between([1_000, 2_500]));
+      if (host?.id === live.hostId && host.settings.notify.joins) toast(`${getUser(botId)!.name} joined your ${getSport(live.sportId)!.name} invite${isFull(live) ? '. It is now full' : ''}`);
+      setTimeout(() => sendMessageAs(botId, inviteChatId(inviteId), lines[n % lines.length]), between([1_000, 2_500]));
     }, delay);
     delay += between(NEXT_JOIN_DELAY);
   });

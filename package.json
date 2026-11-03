@@ -1,5 +1,5 @@
 {
-  "name": "sport-meetup-prototype",
+  "name": "sport-invite-prototype",
   "private": true,
   "scripts": {
     "build": "esbuild src/ts/main.ts --bundle --outfile=public/app.js --target=es2020",

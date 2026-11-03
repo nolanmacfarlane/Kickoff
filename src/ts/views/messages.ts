@@ -1,4 +1,4 @@
-// Messages: direct messages with friends and one group chat per meetup. Chat list on the left, conversation on the right.
+// Messages: direct messages with friends and one group chat per invite. Chat list on the left, conversation on the right.
 import { socialNav } from '../components/socialNav';
 import { sportIcon, uiIcon } from '../components/sportBits';
 import { avatar, dayLabel, firstName, fmtAgo, fmtTime, fmtWhen, h, tag, toast } from '../dom';
@@ -24,7 +24,7 @@ export function render(args: string[]): HTMLElement {
     if (!c.last) return 'No messages yet';
     if (c.last.senderId === null) return c.last.text;
     const own = c.last.senderId === me.id;
-    return own ? `You: ${c.last.text}` : c.kind === 'meetup' ? `${firstName(getUser(c.last.senderId)!.name)}: ${c.last.text}` : c.last.text;
+    return own ? `You: ${c.last.text}` : c.kind === 'invite' ? `${firstName(getUser(c.last.senderId)!.name)}: ${c.last.text}` : c.last.text;
   };
 
   const list = h('nav', { class: 'chat-list card', 'aria-label': 'Conversations' }, chats.length
@@ -37,12 +37,12 @@ export function render(args: string[]): HTMLElement {
             h('p', { class: `chat-item__preview ${c.unread ? 'chat-item__preview--unread' : ''}`.trim() }, preview(c))),
           c.unread ? h('span', { class: 'badge', 'aria-label': `${c.unread} unread` }, String(c.unread)) : null);
       })
-    : [h('div', { class: 'empty empty--tight' }, 'Add friends or join a meetup to start chatting.')]);
+    : [h('div', { class: 'empty empty--tight' }, 'Add friends or join an invite to start chatting.')]);
 
   let pane: HTMLElement;
   if (!selected) {
     pane = h('div', { class: 'card empty' }, h('h3', {}, args[0] ? 'That conversation is not available' : 'No conversations yet'),
-      h('p', {}, args[0] ? 'You can message friends, and meetups you are in.' : 'Add a friend or join a meetup to start one.'));
+      h('p', {}, args[0] ? 'You can message friends, and invites you are in.' : 'Add a friend or join an invite to start one.'));
   } else {
     const d = describe(selected);
     const inv = selected.inviteId ? getInvite(selected.inviteId)! : null;
@@ -57,14 +57,14 @@ export function render(args: string[]): HTMLElement {
       if (m.senderId === null) { thread.append(h('p', { class: 'msg msg--system' }, m.text)); continue; }
       const own = m.senderId === me.id;
       thread.append(h('div', { class: `msg ${own ? 'msg--own' : ''}`.trim() },
-        !own && selected.kind === 'meetup' ? h('span', { class: 'msg__who' }, getUser(m.senderId)!.name) : null,
+        !own && selected.kind === 'invite' ? h('span', { class: 'msg__who' }, getUser(m.senderId)!.name) : null,
         h('p', { class: 'msg__text' }, m.text), h('time', { class: 'msg__time' }, fmtTime(m.at))));
     }
 
     const input = h('input', { class: 'input', type: 'text', placeholder: 'Write a message', maxlength: 500, 'aria-label': 'Message', value: drafts.get(selected.id) ?? '',
       dataset: { key: 'composer' }, onInput: (e: Event) => { drafts.set(selected.id, (e.target as HTMLInputElement).value); } });
     const composer = selected.readOnly
-      ? h('p', { class: 'notice' }, 'This meetup has ended, so its chat is read only.')
+      ? h('p', { class: 'notice' }, 'This invite has ended, so its chat is read only.')
       : h('form', { class: 'composer', onSubmit: (e: Event) => {
           e.preventDefault();
           const text = input.value;
@@ -78,7 +78,7 @@ export function render(args: string[]): HTMLElement {
         h('div', { class: 'avatar-stack' }, people.slice(0, 4).map((u) => avatar(u, 'sm'))),
         h('div', { class: 'grow' }, h('h2', {}, d.title), h('p', { class: 'card__meta' }, inv ? `${d.sub}, ${people.length} people` : d.sub)),
         selected.readOnly ? tag('Ended') : null,
-        inv ? h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => openInvite(inv.id) }, 'View meetup') : null),
+        inv ? h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => openInvite(inv.id) }, 'View invite') : null),
       thread, composer);
     // After it is on screen: jump to the newest message and mark the chat read (does nothing if already read, so no loop).
     setTimeout(() => { thread.scrollTop = thread.scrollHeight; markChatRead(selected.id); }, 0);

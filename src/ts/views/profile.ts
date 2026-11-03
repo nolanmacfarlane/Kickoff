@@ -126,10 +126,10 @@ function personalization(): HTMLElement {
         field('Vibe', seg<Vibe>('def-vibe', [{ value: 'Casual', label: 'Casual' }, { value: 'Competitive', label: 'Competitive' }], def.vibe, (v) => set(() => { def.vibe = v; })())),
         field('Who can see it', seg<Visibility>('def-vis', [{ value: 'open', label: 'Open to everyone' }, { value: 'friends', label: 'Friends only' }], def.visibility, (v) => set(() => { def.visibility = v; })()))),
       h('section', { class: 'card stack' }, h('h2', {}, 'Notifications'),
-        toggle('joins', 'Someone joins my meetup', 'Includes when a meetup fills up.'),
-        toggle('leaves', 'Someone leaves my meetup', 'Changes apply straight away.'),
+        toggle('joins', 'Someone joins my invite', 'Includes when an invite fills up.'),
+        toggle('leaves', 'Someone leaves my invite', 'Changes apply straight away.'),
         toggle('friends', 'Friend requests', 'New requests and when yours is accepted.'),
-        toggle('friendInvites', 'Friends create an invite', 'When a friend starts a meetup you can see.'),
+        toggle('friendInvites', 'Friends create an invite', 'When a friend starts an invite you can see.'),
         toggle('messages', 'New messages', 'Counts unread chats in the Social tab badge.')))));
     bar.refresh();
   }
@@ -195,7 +195,7 @@ export function render(args: string[]): HTMLElement {
     const up = myUpcoming(me.id), past = myPast(me.id), log = activityFor(me.id);
     content = h('div', { class: 'stack' },
       h('section', {}, h('div', { class: 'section-head' }, h('h2', {}, 'Upcoming')), up.length ? h('div', { class: 'card-list' }, up.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'Nothing planned.')),
-      h('section', {}, h('div', { class: 'section-head' }, h('h2', {}, 'Past meetups')), past.length ? h('div', { class: 'card-list' }, past.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'No past meetups yet.')),
+      h('section', {}, h('div', { class: 'section-head' }, h('h2', {}, 'Past invites')), past.length ? h('div', { class: 'card-list' }, past.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'No past invites yet.')),
       h('section', {}, h('div', { class: 'section-head' }, h('h2', {}, 'History')), log.length ? h('ul', { class: 'card activity-list' }, log.map((a) => h('li', {}, h('span', {}, a.text), h('time', {}, fmtAgo(a.at))))) : h('div', { class: 'empty empty--tight' }, 'No activity yet.'),
         log.length ? h('div', { class: 'activity-export' }, h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => exportHistory(me.name, log) }, 'Export history')) : null));
   } else content = h('div', { class: 'card stack' }, h('h2', {}, 'About us'), h('p', {}, 'Kickoff helps people play sports together on short notice, or plan ahead. This is a course prototype with made-up data.'),
@@ -208,7 +208,7 @@ export function render(args: string[]): HTMLElement {
 
   return h('div', { class: 'profile-layout' },
     h('aside', { class: 'profile-side' },
-      h('div', { class: 'profile-head' }, avatar(me, 'xl'), h('div', {}, h('h1', { title: me.name }, me.name), h('p', { class: 'muted' }, `${count} meetup${count === 1 ? '' : 's'}`))),
+      h('div', { class: 'profile-head' }, avatar(me, 'xl'), h('div', {}, h('h1', { title: me.name }, me.name), h('p', { class: 'muted' }, `${count} invite${count === 1 ? '' : 's'}`))),
       h('nav', { class: 'card menu-list', 'aria-label': 'Profile sections' },
         SECTIONS.map(([id, label]) => h('a', { href: id === 'profile' ? '#/profile' : `#/profile/${id}`, 'aria-current': id === section ? 'page' : null, dataset: { section: id } },
           label, id === 'profile' || id === 'personalization' ? unsavedMark(id === section && !!getGuard()?.isDirty()) : null)),

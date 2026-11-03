@@ -1,4 +1,4 @@
-// Social tab. Overview shows a short preview of each section; Meetups, Friends' plans, Requests and Friends each have
+// Social tab. Overview shows a short preview of each section; Invites, Friends' plans, Requests and Friends each have
 // their own tab with search and filters. Messages is its own view.
 import { friendsPlansList } from '../components/friendsPlans';
 import { seg, toggleBox } from '../components/seg';
@@ -9,19 +9,19 @@ import { avatar, type Child, confirmDialog, fmtAgo, go, h, keepFocus, toast } fr
 import { setRefresher } from '../nav';
 import {
   acceptFriendRequest, chatSummaries, currentUser, declineFriendRequest, directChatId, friendsPlans, getSport, getUser, incomingRequests, lastPlayedWith,
-  markKindRead, meetupChatId, myUpcoming, outgoingRequests, removeFriend, unreadCount,
+  markKindRead, inviteChatId, myUpcoming, outgoingRequests, removeFriend, unreadCount,
 } from '../state';
 import type { FriendRequest, Invite, NotificationKind, User } from '../types';
 import { openInvite } from './inviteDetail';
 import * as messages from './messages';
 import { openSportInfo } from './sportInfo';
 
-const PREVIEW = { meetups: 5, plans: 5, requests: 3, friends: 8 };
+const PREVIEW = { invites: 5, plans: 5, requests: 3, friends: 8 };
 const DAY = 86_400_000;
 type TimeRange = 'any' | 'today' | 'tomorrow' | 'week';
 
 // Filters survive re-renders and moving between tabs, like the Map tab's.
-const meetupF = { q: '', sport: 'all', time: 'any' as TimeRange, unread: false };
+const inviteF = { q: '', sport: 'all', time: 'any' as TimeRange, unread: false };
 const planF = { q: '', sport: 'all', time: 'any' as TimeRange, friend: 'all' };
 const requestF = { q: '', dir: 'all' as 'all' | 'incoming' | 'sent' };
 const friendF = { q: '', sort: 'name' as 'name' | 'recent' };
@@ -29,7 +29,7 @@ const friendF = { q: '', sort: 'name' as 'name' | 'recent' };
 export function render(args: string[]): HTMLElement {
   switch (args[0]) {
     case 'messages': return messages.render(args.slice(1));
-    case 'meetups': return meetupsTab();
+    case 'invites': return invitesTab();
     case 'plans': return plansTab();
     case 'requests': return requestsTab();
     case 'friends': return friendsTab();
@@ -124,10 +124,10 @@ function flatten(c: Child[]): Node[] {
 
 // ---------- rows ----------
 
-const meetupCard = (me: User, i: Invite): HTMLElement => inviteCard(i, me, {
+const myInviteCard = (me: User, i: Invite): HTMLElement => inviteCard(i, me, {
   people: { kind: 'members' }, hideGoingTag: true, onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) });
 const chatUnreadMap = (me: User) => new Map(chatSummaries(me.id).map((c) => [c.id, c.unread]));
-const noMeetups = () => h('div', { class: 'empty' }, h('h3', {}, 'No meetups yet'), h('p', {}, 'Join a game from the map or create your own.'), h('a', { class: 'btn btn--primary', href: '#/map' }, 'Find a game'));
+const noInvites = () => h('div', { class: 'empty' }, h('h3', {}, 'No invites yet'), h('p', {}, 'Join a game from the map or create your own.'), h('a', { class: 'btn btn--primary', href: '#/map' }, 'Find a game'));
 
 function incomingRow(r: FriendRequest): HTMLElement {
   const u = getUser(r.fromId)!;
@@ -171,8 +171,8 @@ function overview(): HTMLElement {
   return h('div', {}, socialNav('overview'),
     h('div', { class: 'cols' },
       h('div', { class: 'stack' },
-        h('section', { 'aria-labelledby': 'mt-h' }, sectionHead('My meetups', 'mt-h', '#/social/meetups', upcoming.length),
-          upcoming.length ? h('div', { class: 'card-list' }, upcoming.slice(0, PREVIEW.meetups).map((i) => meetupCard(me, i))) : noMeetups()),
+        h('section', { 'aria-labelledby': 'mt-h' }, sectionHead('My invites', 'mt-h', '#/social/invites', upcoming.length),
+          upcoming.length ? h('div', { class: 'card-list' }, upcoming.slice(0, PREVIEW.invites).map((i) => myInviteCard(me, i))) : noInvites()),
         h('section', { 'aria-labelledby': 'fp-h' }, sectionHead("Friends' plans", 'fp-h', '#/social/plans', plans.length),
           friendsPlansList(me, PREVIEW.plans, openInvite, openSportInfo, plans))),
       h('div', { class: 'stack' },
@@ -183,31 +183,31 @@ function overview(): HTMLElement {
             : noFriends()))));
 }
 
-// ---------- Meetups ----------
+// ---------- Invites ----------
 
-function meetupsTab(): HTMLElement {
-  const clear = () => { Object.assign(meetupF, { q: '', sport: 'all', time: 'any', unread: false }); draw(); };
-  const filtered = () => !!meetupF.q.trim() || meetupF.sport !== 'all' || meetupF.time !== 'any' || meetupF.unread;
+function invitesTab(): HTMLElement {
+  const clear = () => { Object.assign(inviteF, { q: '', sport: 'all', time: 'any', unread: false }); draw(); };
+  const filtered = () => !!inviteF.q.trim() || inviteF.sport !== 'all' || inviteF.time !== 'any' || inviteF.unread;
   const { el, draw } = listTab({
-    tab: 'meetups', searchLabel: 'Search meetups', placeholder: 'Search sport, place or people', state: meetupF,
+    tab: 'invites', searchLabel: 'Search invites', placeholder: 'Search sport, place or people', state: inviteF,
     controls: () => {
       const all = myUpcoming(currentUser()!.id);
       return [
-        select('Sport', 'f-m-sport', meetupF.sport, sportOptions(all.map((i) => i.sportId)), (v) => { meetupF.sport = v; draw(); }),
-        select('Time', 'f-m-time', meetupF.time, TIME_OPTIONS, (v) => { meetupF.time = v as TimeRange; draw(); }),
-        h('button', { type: 'button', class: 'toggle', 'aria-pressed': meetupF.unread, dataset: { key: 'f-m-unread' }, onClick: () => { meetupF.unread = !meetupF.unread; draw(); } }, toggleBox(), 'Unread only'),
+        select('Sport', 'f-m-sport', inviteF.sport, sportOptions(all.map((i) => i.sportId)), (v) => { inviteF.sport = v; draw(); }),
+        select('Time', 'f-m-time', inviteF.time, TIME_OPTIONS, (v) => { inviteF.time = v as TimeRange; draw(); }),
+        h('button', { type: 'button', class: 'toggle', 'aria-pressed': inviteF.unread, dataset: { key: 'f-m-unread' }, onClick: () => { inviteF.unread = !inviteF.unread; draw(); } }, toggleBox(), 'Unread only'),
       ];
     },
     results: () => {
       const me = currentUser()!;
       const all = myUpcoming(me.id);
-      if (!all.length) return [noMeetups()];
+      if (!all.length) return [noInvites()];
       const chatN = chatUnreadMap(me);
-      const unread = (i: Invite) => unreadCount(me.id, i.id) + (chatN.get(meetupChatId(i.id)) ?? 0) > 0;
-      const shown = all.filter((i) => (meetupF.sport === 'all' || i.sportId === meetupF.sport) && inTime(i.start, meetupF.time)
-        && (!meetupF.unread || unread(i)) && matches(meetupF.q, inviteWords(i)));
+      const unread = (i: Invite) => unreadCount(me.id, i.id) + (chatN.get(inviteChatId(i.id)) ?? 0) > 0;
+      const shown = all.filter((i) => (inviteF.sport === 'all' || i.sportId === inviteF.sport) && inTime(i.start, inviteF.time)
+        && (!inviteF.unread || unread(i)) && matches(inviteF.q, inviteWords(i)));
       return [countLine(shown.length, all.length, filtered(), clear),
-        shown.length ? h('div', { class: 'card-list' }, shown.map((i) => meetupCard(me, i))) : noMatch('meetups', clear)];
+        shown.length ? h('div', { class: 'card-list' }, shown.map((i) => myInviteCard(me, i))) : noMatch('invites', clear)];
     },
   });
   return el;

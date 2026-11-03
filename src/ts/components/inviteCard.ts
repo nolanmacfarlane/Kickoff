@@ -2,7 +2,7 @@
 import { avatar, firstName, fmtWhen, go, h, tag } from '../dom';
 import { distanceKm, fmtDistance } from '../geo';
 import { matchInvite, type MatchResult } from '../match';
-import { canSee, getSport, getUser, isFull, isPast, meetupChatId, meetupChatUnread, unreadCount } from '../state';
+import { canSee, getSport, getUser, isFull, isPast, inviteChatId, inviteChatUnread, unreadCount } from '../state';
 import type { Invite, User } from '../types';
 import { joinInvite } from './joinFlow';
 import { shareInvite } from './share';
@@ -32,7 +32,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /** What's new on an invite since you last looked, as pills beside the title. Always visible (the action buttons only show on hover). */
 function newPills(inv: Invite, user: User): HTMLElement[] {
-  const msgs = meetupChatUnread(user.id, inv.id) ?? 0, updates = unreadCount(user.id, inv.id);
+  const msgs = inviteChatUnread(user.id, inv.id) ?? 0, updates = unreadCount(user.id, inv.id);
   return [
     msgs ? tag(plural(msgs, 'new message'), 'tag--new') : null,
     updates ? tag(plural(updates, 'update'), 'tag--new') : null,
@@ -73,13 +73,13 @@ function inviteActions(inv: Invite, user: User, o: ActionOptions = {}): HTMLElem
   const sport = getSport(inv.sportId)!.name;
   const past = isPast(inv);
   const canJoin = !inv.memberIds.includes(user.id) && !isFull(inv) && !past;
-  const chatN = meetupChatUnread(user.id, inv.id);
+  const chatN = inviteChatUnread(user.id, inv.id);
   const onMap = showsOnMap(inv, user);
   const showMap = o.onShowMap === false ? null : o.onShowMap ?? (() => goToMap(inv.id));
   return h('div', { class: 'card-actions' },
     canJoin ? h('button', { class: 'btn btn--primary btn--sm', type: 'button', 'aria-label': `Join ${sport}`, onClick: () => joinInvite(inv.id) }, 'Join') : null,
     past ? null : actionButton(uiIcon('share'), `Share ${sport}`, () => shareInvite(inv.id)),
-    chatN === null ? null : actionButton(uiIcon('chat'), 'Group chat', () => go(`#/social/messages/${meetupChatId(inv.id)}`), chatN),
+    chatN === null ? null : actionButton(uiIcon('chat'), 'Group chat', () => go(`#/social/messages/${inviteChatId(inv.id)}`), chatN),
     onMap && showMap ? actionButton(uiIcon('mapPin'), 'Show on map', showMap, 0, `showmap-${inv.id}`) : null);
 }
 
@@ -112,7 +112,7 @@ function peopleEl(inv: Invite, p: CardPeople): HTMLElement {
     h('span', { class: 'invite-card__names' }, names(users)), stack(users, 3));
 }
 
-/** The one invite card used everywhere (suggestions, map, profile, meetups, friends' plans). */
+/** The one invite card used everywhere (suggestions, map, profile, invites, friends' plans). */
 export function inviteCard(inv: Invite, user: User, o: CardOptions): HTMLElement {
   return h(o.as ?? 'article', { class: `card card--link invite-card ${o.selected ? 'card--selected' : ''}`.trim(), dataset: { invite: inv.id } },
     h('div', { class: 'invite-card__top' },

@@ -97,10 +97,10 @@ void before;
 
 // ---- messaging ----
 S.initState(); S.loginDemo();
-const maya = S.directChatId(demo, 'u-maya'), tom = S.directChatId(demo, 'u-tom'), group = S.meetupChatId('i-11');
+const maya = S.directChatId(demo, 'u-maya'), tom = S.directChatId(demo, 'u-tom'), group = S.inviteChatId('i-11');
 check('demo starts with 4 unread messages (system lines do not count)', S.unreadMessages(demo) === 4);
 const chats = S.chatSummaries(demo);
-check('chat list has every friend and the meetup chat, newest first', [maya, tom, group].every((id) => chats.some((c) => c.id === id)) && chats[0].id === group);
+check('chat list has every friend and the invite chat, newest first', [maya, tom, group].every((id) => chats.some((c) => c.id === id)) && chats[0].id === group);
 S.markChatRead(maya);
 check('opening a chat marks it read', S.unreadMessages(demo) === 3);
 check('direct message to a friend works', S.sendMessage(maya, '  See you Thursday  ').ok && S.messagesIn(maya).pop()!.text === 'See you Thursday');
@@ -110,20 +110,20 @@ check('cannot direct message a non-friend', !S.sendMessage(S.directChatId(demo, 
 loginAs('u-maya');
 check('friend sees it as unread', S.unreadMessages('u-maya') === 3);
 loginAs('u-lena');
-check('non-member cannot use a meetup chat', !S.sendMessage(group, 'hello').ok);
+check('non-member cannot use an invite chat', !S.sendMessage(group, 'hello').ok);
 loginAs('u-sofia'); S.acceptInvite('i-11');
 check('joining adds a system line to the group chat', S.messagesIn(group).some((m) => m.senderId === null && m.text === 'Sofia joined'));
 check('members can message the group', S.sendMessage(group, 'Hi all').ok);
 S.leaveInvite('i-11');
 check('leaving adds a system line and removes access', S.messagesIn(group).some((m) => m.text === 'Sofia left') && !S.sendMessage(group, 'still here?').ok);
 loginAs(demo);
-check('past meetup chat is read only', !S.sendMessage(S.meetupChatId('i-12'), 'late').ok);
+check('past invite chat is read only', !S.sendMessage(S.inviteChatId('i-12'), 'late').ok);
 const mine = S.createInvite({ ...base, skills: ['Beginner'] });
 const mineId = mine.ok ? mine.id! : '';
-S.sendMessage(S.meetupChatId(mineId), 'anyone?');
-check('host can message their own new meetup', S.messagesIn(S.meetupChatId(mineId)).length === 1);
+S.sendMessage(S.inviteChatId(mineId), 'anyone?');
+check('host can message their own new invite', S.messagesIn(S.inviteChatId(mineId)).length === 1);
 S.leaveInvite(mineId);
-check('deleting a meetup deletes its chat', mineId !== '' && S.messagesIn(S.meetupChatId(mineId)).length === 0);
+check('deleting an invite deletes its chat', mineId !== '' && S.messagesIn(S.inviteChatId(mineId)).length === 0);
 
 // ---- friends' plans ----
 S.initState(); S.loginDemo();
@@ -136,11 +136,11 @@ check('message notifications default on', S.getUser(demo)!.settings.notify.messa
 S.initState(); S.loginDemo();
 const unreadBefore = S.unreadCount(demo);
 S.markKindRead('friend');
-check('friend-request notifications are cleared by opening Social, meetup ones are not', S.unreadCount(demo) === unreadBefore - 1 && S.unreadCount(demo, 'i-11') === 2);
+check('friend-request notifications are cleared by opening Social, invite ones are not', S.unreadCount(demo) === unreadBefore - 1 && S.unreadCount(demo, 'i-11') === 2);
 
 // ---- removing a friend ----
 S.initState(); S.loginDemo();
-check('last played with Maya is the past Soccer meetup', S.lastPlayedWith(demo, 'u-maya') === S.getInvite('i-12')!.start);
+check('last played with Maya is the past Soccer invite', S.lastPlayedWith(demo, 'u-maya') === S.getInvite('i-12')!.start);
 check('never played with Tom', S.lastPlayedWith(demo, 'u-tom') === null);
 const mayaChat = S.directChatId(demo, 'u-maya');
 check('remove friend works', S.removeFriend('u-maya').ok);

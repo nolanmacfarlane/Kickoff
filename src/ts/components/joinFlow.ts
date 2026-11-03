@@ -1,4 +1,4 @@
-// Joining an invite, from a card or from the details window. Warns if it overlaps another meetup you are going to.
+// Joining an invite, from a card or from the details window. Warns if it overlaps another invite you are going to.
 import { confirmDialog, fmtWhen, toast } from '../dom';
 import { acceptInvite, getSport } from '../state';
 import type { Invite } from '../types';
@@ -12,7 +12,7 @@ export function joinInvite(inviteId: string): void {
     if (r.ok) { toast('You are in. The host and other members have been told.'); return; }
     if (r.conflicts?.length) {
       confirmDialog({
-        title: 'This overlaps with another meetup',
+        title: 'This overlaps with another invite',
         body: `You are already going to ${describeConflicts(r.conflicts)}. Join anyway?`,
         actions: [{ label: 'Cancel' }, { label: 'Join anyway', variant: 'primary', onClick: () => attempt(true) }],
       });

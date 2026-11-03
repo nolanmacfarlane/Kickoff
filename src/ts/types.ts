@@ -15,7 +15,7 @@ export interface BusyBlock { day: number; startHour: number; endHour: number; la
 export type FreeTime = 'weekday-morning' | 'weekday-afternoon' | 'weekday-evening' | 'weekend-morning' | 'weekend-afternoon' | 'weekend-evening';
 
 export type MaxDistance = 'any' | 'near' | 'mid' | 'far';
-/** sportId null = your first sport. durationMin = how long the meetup runs. */
+/** sportId null = your first sport. durationMin = how long the invite runs. */
 export interface InviteDefaults { sportId: string | null; capacity: number; durationMin: number; vibe: Vibe; visibility: Visibility }
 
 export interface Settings {
@@ -110,9 +110,9 @@ export interface Notification {
 export interface FriendRequest { id: string; fromId: string; toId: string; createdAt: number }
 export type FriendStatus = 'self' | 'friend' | 'requested' | 'incoming' | 'none';
 
-/** Chats: direct messages between friends, and one group chat per meetup. senderId null = a system line ("Maya joined"). */
+/** Chats: direct messages between friends, and one group chat per invite. senderId null = a system line ("Maya joined"). */
 export interface Message { id: string; chatId: string; senderId: string | null; text: string; at: number }
-export interface ChatSummary { id: string; kind: 'direct' | 'meetup'; inviteId?: string; friendId?: string; last?: Message; unread: number; readOnly: boolean }
+export interface ChatSummary { id: string; kind: 'direct' | 'invite'; inviteId?: string; friendId?: string; last?: Message; unread: number; readOnly: boolean }
 
 export interface ActivityItem { id: string; userId: string; text: string; at: number; inviteId: string | null }
 
@@ -127,7 +127,7 @@ export interface AppState {
   chatReads: Record<string, Record<string, number>>;   // userId -> chatId -> time last read
 }
 
-/** conflicts: your other meetups that overlap in time. The caller may ask the person and try again with force. */
+/** conflicts: your other invites that overlap in time. The caller may ask the person and try again with force. */
 export type Result = { ok: true; id?: string } | { ok: false; error: string; conflicts?: Invite[] };
 
 export type NewInviteInput = Omit<Invite, 'id' | 'hostId' | 'memberIds'>;

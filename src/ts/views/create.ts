@@ -62,7 +62,7 @@ export function render(): HTMLElement {
     }, Date.now(), force);
     if (!res.ok && res.conflicts?.length) {
       confirmDialog({
-        title: 'This overlaps with another meetup',
+        title: 'This overlaps with another invite',
         body: `You are already going to ${describeConflicts(res.conflicts)}. Create this invite anyway?`,
         actions: [{ label: 'Go back and change the time' }, { label: 'Create anyway', variant: 'primary', onClick: () => submit(true) }],
       });

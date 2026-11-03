@@ -2,7 +2,7 @@
 import { h } from '../dom';
 import { currentUser, incomingRequests, unreadMessages } from '../state';
 
-export type SocialTab = 'overview' | 'meetups' | 'plans' | 'requests' | 'friends' | 'messages';
+export type SocialTab = 'overview' | 'invites' | 'plans' | 'requests' | 'friends' | 'messages';
 
 export function socialNav(active: SocialTab): HTMLElement {
   const me = currentUser()!;
@@ -12,7 +12,7 @@ export function socialNav(active: SocialTab): HTMLElement {
   };
   const tabs: [SocialTab, string, string][] = [
     ['overview', 'Overview', '#/social'],
-    ['meetups', 'Meetups', '#/social/meetups'],
+    ['invites', 'Invites', '#/social/invites'],
     ['plans', "Friends' plans", '#/social/plans'],
     ['requests', 'Requests', '#/social/requests'],
     ['friends', 'Friends', '#/social/friends'],
