@@ -5,6 +5,7 @@ import {
 } from '../components/profileFields';
 import { saveBar, unsavedMark, watchEdits } from '../components/saveBar';
 import { seg } from '../components/seg';
+import { sportIcon } from '../components/sportBits';
 import { sports } from '../data';
 import { DISTANCES, distanceLabel } from '../geo';
 import { avatar, confirmDialog, fmtAgo, go, h, keepFocus, toast } from '../dom';
@@ -149,9 +150,16 @@ const FAQS: [string, string][] = [
 ];
 
 function help(): HTMLElement {
-  return h('div', { class: 'card stack' }, h('h2', {}, 'Frequently asked questions'),
-    h('div', { class: 'faq-list' }, FAQS.map(([q, a]) => h('details', { class: 'faq' }, h('summary', {}, q), h('p', {}, a)))),
-    h('div', {}, h('button', { class: 'btn btn--secondary', type: 'button' }, 'Contact support')));   // intentionally does nothing
+  const byName = [...sports].sort((a, b) => a.name.localeCompare(b.name));
+  return h('div', { class: 'stack' },
+    h('section', { class: 'card stack' }, h('h2', {}, 'Frequently asked questions'),
+      h('div', { class: 'faq-list' }, FAQS.map(([q, a]) => h('details', { class: 'faq' }, h('summary', {}, q), h('p', {}, a)))),
+      h('div', {}, h('button', { class: 'btn btn--secondary', type: 'button' }, 'Contact support'))),   // intentionally does nothing
+    h('section', { class: 'card stack' },
+      h('div', {}, h('h2', {}, 'Sports info'), h('p', { class: 'muted' }, 'Tap a sport to see what you need and where to borrow gear.')),
+      h('ul', { class: 'sport-grid' }, byName.map((s) => h('li', {},
+        h('button', { class: 'sport-tile', type: 'button', 'aria-label': `About ${s.name}`, onClick: () => openSportInfo(s.id) },
+          sportIcon(s.id, 'sport-icon sport-icon--tile'), h('span', {}, s.name)))))));
 }
 
 // Downloads the user's activity log as a Markdown file, newest entry first (same order as on screen).

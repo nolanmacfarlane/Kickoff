@@ -1,4 +1,4 @@
-// "About this sport" popup. Reached ONLY from the (?) button next to a sport name.
+// "About this sport" popup. Reached from the (?) button next to a sport name, or the Profile > Help sports grid.
 import { sportIcon } from '../components/sportBits';
 import { venues } from '../data';
 import { fmtWhen, h, openModal, tag } from '../dom';

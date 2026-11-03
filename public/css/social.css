@@ -44,6 +44,13 @@
 .faq summary { cursor: pointer; padding: var(--s-3) 0; font-weight: 600; }
 .faq p { padding: 0 0 var(--s-3); color: var(--ink-2); }
 
+/* Help > Sports info: every sport as a tile that opens its About modal. */
+.sport-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+.sport-tile { display: grid; justify-items: center; gap: var(--s-2); width: 100%; height: 100%; padding: var(--s-3) var(--s-2); text-align: center; font-size: var(--text-sm); font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r-md); cursor: pointer; }
+.sport-tile:hover { border-color: var(--ink); }
+.sport-tile:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.sport-icon--tile { width: 32px; height: 32px; }
+
 /* Social tabs: one row that scrolls sideways when it does not fit. The grey rule is a shadow so the scroll box does not clip the active underline. */
 .subnav { position: relative; display: flex; gap: var(--s-1); margin-bottom: var(--s-5); box-shadow: inset 0 -1px var(--line); overflow-x: auto; scrollbar-width: thin; }
 .subnav a { flex: none; display: inline-flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-4); color: var(--ink-2); text-decoration: none; font-weight: 500; white-space: nowrap; border-bottom: 3px solid transparent; }

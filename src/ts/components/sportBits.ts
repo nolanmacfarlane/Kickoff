@@ -1,4 +1,4 @@
-// Sport icons (Phosphor, MIT) and the standard "icon + name + ?" label. The ? is the ONE way to get info about a sport.
+// Sport icons (Phosphor, MIT) and the standard "icon + name + ?" label. The ? (and the Help > Sports info grid) are the ways to get info about a sport.
 import { SPORT_ICONS, UI_ICONS } from '../icons';
 import { h, iconButton } from '../dom';
 import { getSport } from '../state';

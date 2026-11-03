@@ -86,7 +86,10 @@ export const sports: Sport[] = [
     gear: [{ item: 'Racket', required: true, note: 'Often shareable' }, { item: 'Tennis balls', required: true, note: 'Host usually brings a can' }] },
   { id: 'fencing', name: 'Fencing', aliases: ['swordplay', 'epee', 'foil', 'sabre', 'saber', 'sword'], tagline: 'Duelling with a safe point', typicalGroup: '2-12 fencers', soloFriendly: false, motivations: ['challenge', 'competition', 'learn'],
     description: 'A fast, tactical sport with blunted swords. Clubs run beginner sessions and lend you everything you need.',
-    gear: [{ item: 'Mask, jacket and glove', required: true, note: 'Clubs lend beginner kit' }, { item: 'Own foil, epee or sabre', required: false, note: 'Not needed to start' }] },
+    gear: [{ item: 'Mask', required: true, note: 'Clubs lend beginner kit' },
+      { item: 'Jacket', required: true, note: 'Clubs lend beginner kit' },
+      { item: 'Glove', required: true, note: 'Clubs lend beginner kit' },
+      { item: 'Own foil, epee or sabre', required: false, note: 'Not needed to start' }] },
   { id: 'golf', name: 'Golf', aliases: ['golfing', 'driving range', 'putting', 'pitch and putt', 'links'], tagline: 'Slow, sociable and outdoors', typicalGroup: '2-4 golfers', soloFriendly: true, motivations: ['social', 'challenge', 'learn'],
     description: 'Hit a ball round a course in as few strokes as you can. A short pitch-and-putt course is a gentle way to start.',
     gear: [{ item: 'Clubs', required: true, note: 'Rentable at most courses' }, { item: 'Golf shoes', required: false, note: 'Flat sneakers are fine on short courses' }] },
@@ -107,7 +110,9 @@ export const sports: Sport[] = [
     gear: [{ item: 'Yoga mat', required: true, note: 'Rentable or shareable' }] },
   { id: 'cricket', name: 'Cricket', aliases: ['wicket', 'bowling', 'batting'], tagline: 'Bat and ball, relaxed pace', typicalGroup: '6-22 players', soloFriendly: false, motivations: ['social', 'learn', 'competition'],
     description: 'A bat-and-ball team game. Informal games on the park pitch welcome newcomers and teach you as you play.',
-    gear: [{ item: 'Bat and pads', required: false, note: 'Clubs share spare gear' }, { item: 'Protective gear', required: false, note: 'Needed for hard-ball matches' }] },
+    gear: [{ item: 'Bat', required: false, note: 'Clubs share spare gear' },
+      { item: 'Pads', required: false, note: 'Clubs share spare gear' },
+      { item: 'Protective gear', required: false, note: 'Needed for hard-ball matches' }] },
 ];
 
 export const motivationOptions: { id: Motivation; label: string; hint: string }[] = [
