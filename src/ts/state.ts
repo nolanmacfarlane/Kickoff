@@ -141,8 +141,10 @@ export function sendFriendRequest(otherId: string): Result {
   emit();
   return ok();
 }
-export function acceptFriendRequest(requestId: string): Result {
-  const me = currentUser();
+export function acceptFriendRequest(requestId: string): Result { return acceptFriendRequestAs(st.currentUserId, requestId); }
+/** Demo bots use this to accept a request on behalf of someone who is not signed in. */
+export function acceptFriendRequestAs(userId: string | null, requestId: string): Result {
+  const me = userId ? st.users[userId] : undefined;
   const req = st.friendRequests.find((r) => r.id === requestId);
   if (!me || !req || req.toId !== me.id) return fail('Request not found.');
   const from = getUser(req.fromId)!;
@@ -228,8 +230,10 @@ export function createInvite(input: NewInviteInput, now = Date.now(), force = fa
   return ok(inv.id);
 }
 
-export function acceptInvite(inviteId: string, now = Date.now(), force = false): Result {
-  const me = currentUser();
+export function acceptInvite(inviteId: string, now = Date.now(), force = false): Result { return acceptInviteAs(st.currentUserId, inviteId, now, force); }
+/** Demo bots use this to join on behalf of someone who is not signed in. Same rules as acceptInvite. */
+export function acceptInviteAs(userId: string | null, inviteId: string, now = Date.now(), force = false): Result {
+  const me = userId ? st.users[userId] : undefined;
   const inv = getInvite(inviteId);
   if (!me) return fail('Not signed in.');
   if (!inv) return fail('This invite no longer exists.');
@@ -339,8 +343,10 @@ export function chatSummaries(userId: string, now = Date.now()): ChatSummary[] {
 }
 export const unreadMessages = (userId: string): number => chatSummaries(userId).reduce((n, c) => n + c.unread, 0);
 
-export function sendMessage(chatId: string, text: string, now = Date.now()): Result {
-  const me = currentUser();
+export function sendMessage(chatId: string, text: string, now = Date.now()): Result { return sendMessageAs(st.currentUserId, chatId, text, now); }
+/** Demo bots use this to post on behalf of someone who is not signed in. */
+export function sendMessageAs(userId: string | null, chatId: string, text: string, now = Date.now()): Result {
+  const me = userId ? st.users[userId] : undefined;
   if (!me) return fail('Not signed in.');
   const access = chatAccess(chatId, me.id);
   if (!access) return fail('You cannot message here.');

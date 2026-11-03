@@ -1,7 +1,8 @@
 // App entry: router, top tabs, notification badge, theme, and the unsaved-changes guard.
+import { startDemoBots } from './bots';
 import { destroyMaps } from './components/mapWidget';
 import { confirmDialog, go, h, keepFocus, refreshModal } from './dom';
-import { getGuard, setGuard } from './nav';
+import { getGuard, getRefresher, setGuard, setRefresher } from './nav';
 import { currentUser, subscribe, unreadCount, unreadMessages } from './state';
 import * as create from './views/create';
 import * as home from './views/home';
@@ -56,6 +57,7 @@ function render(fromState = false): void {
   const path = `${name}/${args.join('/')}`;
   const scrollY = window.scrollY;
   setGuard(null);          // a screen with a form registers its own guard while it renders
+  setRefresher(null);      // ...and a screen that updates itself registers a refresher
   destroyMaps();
   document.body.dataset.route = name;
   let view: HTMLElement;
@@ -77,7 +79,9 @@ subscribe(() => {
   const me = currentUser();
   if (!me || mode !== 'app') { render(true); return; }   // sign in / out switches mode
   updateChrome();
-  if (routes[parse().name].live) keepFocus(() => render(true));
+  const refresh = getRefresher();
+  if (refresh) refresh();                                // the screen updates itself in place (no rebuild)
+  else if (routes[parse().name].live) keepFocus(() => render(true));
   refreshModal();
 });
 
@@ -101,4 +105,5 @@ window.addEventListener('hashchange', () => {
 });
 // Closing the tab: browsers only allow their own generic warning.
 window.addEventListener('beforeunload', (e) => { if (getGuard()?.isDirty()) { e.preventDefault(); e.returnValue = ''; } });
+startDemoBots();   // demo: fake users accept friend requests and join new invites
 render();

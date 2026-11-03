@@ -12,6 +12,7 @@ import { currentUser, getInvite, getSport, mapInvites } from '../state';
 import type { Invite } from '../types';
 import { openInvite } from './inviteDetail';
 import { openSportInfo } from './sportInfo';
+import { setRefresher } from '../nav';
 
 const filters = { sport: 'all', time: 'any', gear: 'any' };   // survives re-renders and tab switches
 const DAY = 86_400_000;
@@ -166,6 +167,7 @@ export function render(args: string[]): HTMLElement {
   }
 
   update();
+  setRefresher(() => update());   // state changes (e.g. someone joins) redraw pins and cards, not the whole map
   if (selectedGroup) handle.focus(selectedGroup, true);   // arrived from "Show on map" elsewhere
   return stage;
 }
