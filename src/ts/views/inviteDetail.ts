@@ -1,5 +1,5 @@
 // Invite detail: opens in a modal from anywhere. All rules are enforced in state.ts; this only shows them.
-import { distanceFrom, inviteTags } from '../components/inviteCard';
+import { distanceFrom, goToMap, inviteTags, showsOnMap } from '../components/inviteCard';
 import { seg, segMulti } from '../components/seg';
 import { SKILLS } from '../data';
 import { joinInvite } from '../components/joinFlow';
@@ -70,6 +70,7 @@ function view(id: string): HTMLElement | null {
   });
 
   const shareBtn = h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => shareInvite(inv.id) }, uiIcon('share', 'icon icon--inline'), 'Share');
+  const mapBtn = showsOnMap(inv, me) ? h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); goToMap(inv.id); } }, uiIcon('mapPin', 'icon icon--inline'), 'Show on map') : null;
   let actions: HTMLElement;
   if (past) actions = h('div', { class: 'stack-sm' }, h('p', { class: 'notice' }, 'This meetup has already happened.'),
     isMember ? h('div', { class: 'detail__actions' }, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'View chat')) : null);
@@ -81,11 +82,11 @@ function view(id: string): HTMLElement | null {
           actions: [{ label: 'Keep invite' }, { label: 'Cancel invite', variant: 'danger', onClick: () => { run(leaveInvite(inv.id), 'Invite cancelled.'); closeModal(); } }] }
       : { title: 'Leave this meetup?', body: `You will give up your spot at ${sport.name} on ${fmtWhen(inv.start, inv.end)}.${nextHost ? ` ${nextHost} will become the host.` : ''} You can join again later if there is still room.`,
           actions: [{ label: 'Stay in' }, { label: 'Leave', variant: 'danger', onClick: () => { run(leaveInvite(inv.id), 'You left the meetup.'); closeModal(); } }] });
-    actions = h('div', { class: 'detail__actions' }, shareBtn, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'Group chat'),
+    actions = h('div', { class: 'detail__actions' }, shareBtn, h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => { closeModal(); go(`#/social/messages/${meetupChatId(inv.id)}`); } }, uiIcon('chat', 'icon icon--inline'), 'Group chat'), mapBtn,
       h('button', { class: 'btn btn--danger', type: 'button', onClick: askLeave }, cancel ? 'Cancel invite' : 'Leave'));
   } else {
     const blocked = isFull(inv) || !canSee(inv, me.id);
-    actions = h('div', { class: 'detail__actions' }, shareBtn, h('button', { class: 'btn btn--primary', type: 'button', disabled: blocked, dataset: { key: 'join' },
+    actions = h('div', { class: 'detail__actions' }, shareBtn, mapBtn, h('button', { class: 'btn btn--primary', type: 'button', disabled: blocked, dataset: { key: 'join' },
       onClick: () => joinInvite(inv.id) }, isFull(inv) ? 'Full' : 'Join'));
   }
 

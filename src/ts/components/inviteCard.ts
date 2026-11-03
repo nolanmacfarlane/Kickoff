@@ -51,6 +51,15 @@ export interface ActionOptions {
   onShowMap?: (() => void) | false;
 }
 
+/** The Map tab only shows invites that are upcoming, not full, and visible to you. */
+export const showsOnMap = (inv: Invite, user: User): boolean => !isPast(inv) && !isFull(inv) && canSee(inv, user.id);
+
+/** Opens the Map tab focused on an invite. Re-renders even if that's the current route (e.g. from a modal over the map). */
+export function goToMap(id: string): void {
+  const hash = `#/map/${id}`;
+  if (location.hash === hash) window.dispatchEvent(new HashChangeEvent('hashchange')); else go(hash);
+}
+
 /** An icon button, with a count badge when there is something new. */
 function actionButton(iconEl: Element, label: string, onClick: () => void, count = 0, key?: string): HTMLElement {
   const btn = h('button', { class: 'icon-btn icon-btn--filled', type: 'button', 'aria-label': count ? `${label}, ${count} new` : label, title: label,
@@ -65,8 +74,8 @@ function inviteActions(inv: Invite, user: User, o: ActionOptions = {}): HTMLElem
   const past = isPast(inv);
   const canJoin = !inv.memberIds.includes(user.id) && !isFull(inv) && !past;
   const chatN = meetupChatUnread(user.id, inv.id);
-  const onMap = !past && !isFull(inv) && canSee(inv, user.id);   // the Map tab only shows these
-  const showMap = o.onShowMap === false ? null : o.onShowMap ?? (() => go(`#/map/${inv.id}`));
+  const onMap = showsOnMap(inv, user);
+  const showMap = o.onShowMap === false ? null : o.onShowMap ?? (() => goToMap(inv.id));
   return h('div', { class: 'card-actions' },
     canJoin ? h('button', { class: 'btn btn--primary btn--sm', type: 'button', 'aria-label': `Join ${sport}`, onClick: () => joinInvite(inv.id) }, 'Join') : null,
     past ? null : actionButton(uiIcon('share'), `Share ${sport}`, () => shareInvite(inv.id)),
