@@ -20,7 +20,7 @@ function view(sportId: string): HTMLElement | null {
 
   return h('div', { class: 'detail' },
     h('div', { class: 'detail__head sport-head' }, sportIcon(sport.id, 'sport-icon sport-icon--xl'),
-      h('div', { class: 'grow' }, h('h2', {}, sport.name), h('p', { class: 'card__meta' }, sport.description))),
+      h('div', { class: 'grow' }, h('h2', {}, `About ${sport.name}`), h('p', { class: 'card__meta' }, sport.description))),
     h('div', { class: 'tags' }, tag(sport.typicalGroup), tag(sport.soloFriendly ? 'Individual sport, done together' : 'Team or partner game')),
     h('section', {}, h('h3', {}, 'What you need'),
       h('ul', { class: 'gear-list' }, sport.gear.map((g) => h('li', { class: 'gear-item' }, h('span', { class: 'gear-item__name' }, g.item),
