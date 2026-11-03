@@ -25,8 +25,13 @@
 .friend-row .grow { min-width: 10rem; }
 
 /* Profile */
-.profile-head { display: flex; align-items: center; gap: var(--s-4); margin-bottom: var(--s-5); }
-.profile-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: var(--s-5); align-items: start; }
+/* The header is pinned to the avatar's height so the content column can start level with the menu. */
+.profile-layout { --head-h: 88px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: var(--s-5); align-items: start; }
+.profile-layout > :last-child { margin-top: calc(var(--head-h) + var(--s-5)); }
+.profile-side { position: sticky; top: calc(var(--topbar-h) + var(--s-4)); display: grid; gap: var(--s-5); }
+.profile-head { display: flex; align-items: center; gap: var(--s-4); height: var(--head-h); }
+.profile-head > div { min-width: 0; }
+.profile-head h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .menu-list { display: grid; padding: var(--s-2); }
 .menu-list a, .menu-list button {
   display: flex; justify-content: space-between; align-items: center; width: 100%;
@@ -36,7 +41,11 @@
 .menu-list a:hover, .menu-list button:hover { background: var(--paper); }
 .menu-list [aria-current="page"] { background: var(--primary-soft); font-weight: 600; }
 .menu-list .is-danger { color: var(--bad); }
-@media (max-width: 980px) { .profile-layout { grid-template-columns: 1fr; } }
+@media (max-width: 980px) {
+  .profile-layout { grid-template-columns: 1fr; }
+  .profile-layout > :last-child { margin-top: 0; }
+  .profile-side { position: static; }
+}
 
 /* Help: collapsible FAQ */
 .faq-list { display: grid; }

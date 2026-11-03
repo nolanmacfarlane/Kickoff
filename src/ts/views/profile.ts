@@ -206,12 +206,12 @@ export function render(args: string[]): HTMLElement {
     actions: [{ label: 'Stay logged in' }, { label: 'Log out', variant: 'danger', onClick: () => { editing = null; settingsEdit = null; setGuard(null); logout(); go('#/home'); toast('You are logged out.'); } }],
   });
 
-  return h('div', {},
-    h('div', { class: 'profile-head' }, avatar(me, 'xl'), h('div', {}, h('h1', {}, me.name), h('p', { class: 'muted' }, `${count} meetup${count === 1 ? '' : 's'}`))),
-    h('div', { class: 'profile-layout' },
+  return h('div', { class: 'profile-layout' },
+    h('aside', { class: 'profile-side' },
+      h('div', { class: 'profile-head' }, avatar(me, 'xl'), h('div', {}, h('h1', { title: me.name }, me.name), h('p', { class: 'muted' }, `${count} meetup${count === 1 ? '' : 's'}`))),
       h('nav', { class: 'card menu-list', 'aria-label': 'Profile sections' },
         SECTIONS.map(([id, label]) => h('a', { href: id === 'profile' ? '#/profile' : `#/profile/${id}`, 'aria-current': id === section ? 'page' : null, dataset: { section: id } },
           label, id === 'profile' || id === 'personalization' ? unsavedMark(id === section && !!getGuard()?.isDirty()) : null)),
-        h('button', { class: 'is-danger', type: 'button', onClick: askLogout }, 'Log out')),
-      content));
+        h('button', { class: 'is-danger', type: 'button', onClick: askLogout }, 'Log out'))),
+    content);
 }
