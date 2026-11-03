@@ -11,6 +11,8 @@ export interface SportSkill { sportId: string; skill: Skill }
 
 /** Fake calendar: a recurring weekly busy block (day 0 = Sunday). */
 export interface BusyBlock { day: number; startHour: number; endHour: number; label: string }
+/** "When are you usually free?" chips, used for schedule matching when no calendar is synced. */
+export type FreeTime = 'weekday-morning' | 'weekday-afternoon' | 'weekday-evening' | 'weekend-morning' | 'weekend-afternoon' | 'weekend-evening';
 
 export type MaxDistance = 'any' | 'near' | 'mid' | 'far';
 /** sportId null = your first sport. durationMin = how long the meetup runs. */
@@ -39,6 +41,7 @@ export interface User {
   currentSports: SportSkill[];
   desiredSports: string[];      // sport ids
   calendar: BusyBlock[] | null; // null = not synced (optional step)
+  freeTimes: FreeTime[];        // used instead of the calendar when it is not synced; empty = not answered
   friendIds: string[];
   settings: Settings;
 }

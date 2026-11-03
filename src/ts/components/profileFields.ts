@@ -1,21 +1,21 @@
 // Profile inputs shared by onboarding and the Profile tab. They edit a draft object, then call redraw().
-import { geocode, motivationOptions, sampleCalendar, SKILLS, sportMatches, sports } from '../data';
+import { freeTimeOptions, geocode, motivationOptions, sampleCalendar, SKILLS, sportMatches, sports } from '../data';
 import { append, fmtHour, h, iconButton } from '../dom';
-import type { BusyBlock, Motivation, Skill, Sport, User } from '../types';
-import { toggleBox } from './seg';
+import type { BusyBlock, FreeTime, Motivation, Skill, Sport, User } from '../types';
+import { segMulti, toggleBox } from './seg';
 import { sportIcon, sportLabel, uiIcon } from './sportBits';
 
 /** One entry per added sport: "try" (want to try), a skill level, or "unset" right after adding. Sports not in the object are not added. */
 export type SportChoice = 'try' | Skill | 'unset';   // 'unset' = just added, level not chosen yet
 export interface ProfileDraft {
   name: string; address: string; motivations: Motivation[];
-  sports: Record<string, SportChoice>; calendar: BusyBlock[] | null;
+  sports: Record<string, SportChoice>; calendar: BusyBlock[] | null; freeTimes: FreeTime[];
 }
-export const blankDraft = (): ProfileDraft => ({ name: '', address: '', motivations: [], sports: {}, calendar: null });
+export const blankDraft = (): ProfileDraft => ({ name: '', address: '', motivations: [], sports: {}, calendar: null, freeTimes: [] });
 export const draftFromUser = (u: User): ProfileDraft => ({
   name: u.name, address: u.address, motivations: [...u.motivations],
   sports: { ...Object.fromEntries(u.desiredSports.map((id) => [id, 'try' as SportChoice])), ...Object.fromEntries(u.currentSports.map((s) => [s.sportId, s.skill as SportChoice])) },
-  calendar: u.calendar ? u.calendar.map((b) => ({ ...b })) : null,
+  calendar: u.calendar ? u.calendar.map((b) => ({ ...b })) : null, freeTimes: [...u.freeTimes],
 });
 /** Turns the draft into a profile; the address goes through the fake lookup to find area and map position. */
 export function draftToProfile(d: ProfileDraft): Omit<User, 'id' | 'avatarColor' | 'friendIds' | 'settings'> {
@@ -24,7 +24,7 @@ export function draftToProfile(d: ProfileDraft): Omit<User, 'id' | 'avatarColor'
   return {
     name: d.name.trim(), address: d.address.trim(), area: g.area, lat: g.lat, lng: g.lng, motivations: d.motivations,
     currentSports: entries.filter(([, v]) => v !== 'try' && v !== 'unset').map(([sportId, v]) => ({ sportId, skill: v as Skill })),
-    desiredSports: entries.filter(([, v]) => v === 'try').map(([id]) => id), calendar: d.calendar,
+    desiredSports: entries.filter(([, v]) => v === 'try').map(([id]) => id), calendar: d.calendar, freeTimes: d.freeTimes,
   };
 }
 
@@ -154,5 +154,17 @@ export function calendarField(d: ProfileDraft, redraw: () => void, weekStart: 0 
     h('label', { class: 'check' },
       h('input', { type: 'checkbox', checked: on, dataset: { key: 'cal' }, onChange: (e: Event) => { d.calendar = (e.target as HTMLInputElement).checked ? sampleCalendar.map((b) => ({ ...b })) : null; redraw(); } }),
       h('span', { class: 'check__text' }, 'Sync my calendar', h('small', {}, 'Demo only: adds a made-up class and work schedule so we can suggest games when you are free.'))),
-    grid);
+    grid ?? freeTimeField(d, redraw));
+}
+
+/** Shown when the calendar is not synced: rough "usually free" times, one row for weekdays and one for weekends. */
+function freeTimeField(d: ProfileDraft, redraw: () => void): HTMLElement {
+  const row = (weekend: boolean) => {
+    const opts = freeTimeOptions.filter((o) => o.weekend === weekend);
+    const mine = (v: FreeTime) => opts.some((o) => o.id === v);
+    return h('div', { class: 'field' }, h('span', { class: 'field__label' }, weekend ? 'Weekends' : 'Weekdays'),
+      segMulti(weekend ? 'free-weekend' : 'free-weekday', opts.map((o) => ({ value: o.id, label: o.label })), d.freeTimes.filter(mine),
+        (picked) => { d.freeTimes = [...d.freeTimes.filter((v) => !mine(v)), ...picked]; redraw(); }));
+  };
+  return h('fieldset', { class: 'stack-sm' }, h('legend', {}, 'Or pick when you are usually free'), row(false), row(true));
 }

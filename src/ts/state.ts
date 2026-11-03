@@ -1,9 +1,10 @@
 // The single source of truth. Views READ via selectors and CHANGE data only via actions.
 // All invite rules (full = hidden, host handover, tag locking, friends-only, friend requests) live here.
 import { defaultSettings, seedInvites, seedUsers, sports, venues } from './data';
+import { distanceKm, fmtDistance, withinDistance } from './geo';
 import type {
   ActivityItem, AppState, ChatSummary, FriendRequest, FriendStatus, Invite, Message, NewInviteInput, Notification, NotificationKind,
-  Result, SettingsPatch, TagEdit, User,
+  MaxDistance, Result, Settings, SettingsPatch, TagEdit, User,
 } from './types';
 
 let st: AppState;
@@ -127,14 +128,53 @@ export function knownPeople(userId: string, now = Date.now()): Set<string> {
 }
 export const canRequestFriend = (otherId: string): boolean => {
   const me = currentUser();
-  return !!me && friendStatus(otherId) === 'none' && knownPeople(me.id).has(otherId);
+  return !!me && friendStatus(otherId) === 'none'
+    && (knownPeople(me.id).has(otherId) || suggestFriends(me, me.settings.maxDistance, me.settings.units, me.id).some((s) => s.user.id === otherId));
 };
+
+/** The parts of a profile that friend suggestions look at. Onboarding passes the draft before the user exists. */
+export type FriendProfile = Pick<User, 'area' | 'lat' | 'lng' | 'motivations' | 'currentSports' | 'desiredSports'>;
+export interface FriendSuggestion { user: User; score: number; reasons: string[] }
+
+/**
+ * "People you may know": others who play your sports (more if at your level), play a sport you want to try,
+ * live near you, or want the same things. Someone must share a sport or live in your area, and be within your distance setting.
+ */
+export function suggestFriends(p: FriendProfile, maxDistance: MaxDistance, units: 'km' | 'mi', selfId: string | null = null, limit = 5): FriendSuggestion[] {
+  const self = selfId ? st.users[selfId] : undefined;
+  const out: FriendSuggestion[] = [];
+  for (const u of Object.values(st.users)) {
+    if (u.id === selfId || u.id === 'u-demo' || self?.friendIds.includes(u.id)) continue;
+    if (!withinDistance(p, u, maxDistance, units)) continue;
+    let score = 0;
+    const reasons: string[] = [];
+    for (const mine of p.currentSports) {
+      const theirs = u.currentSports.find((s) => s.sportId === mine.sportId);
+      if (!theirs) continue;
+      const name = getSport(mine.sportId)!.name;
+      if (theirs.skill === mine.skill) { score += 4; reasons.push(`${name}, ${theirs.skill.toLowerCase()} like you`); }
+      else { score += 3; reasons.push(`Plays ${name.toLowerCase()}`); }
+    }
+    for (const id of p.desiredSports) {
+      const theirs = u.currentSports.find((s) => s.sportId === id);
+      if (theirs) { score += 2; reasons.push(`Plays ${getSport(id)!.name.toLowerCase()}, which you want to try`); }
+      else if (u.desiredSports.includes(id)) { score += 2; reasons.push(`Also wants to try ${getSport(id)!.name.toLowerCase()}`); }
+    }
+    const sharesSport = score > 0;
+    if (u.area === p.area) { score += 2; reasons.push(`Lives in ${u.area}`); }
+    else reasons.push(`${fmtDistance(distanceKm(p, u), units)} away`);
+    if (!sharesSport && u.area !== p.area) continue;
+    score += u.motivations.filter((m) => p.motivations.includes(m)).length * 0.5;   // tie-breaker only: most people share one
+    out.push({ user: u, score, reasons });
+  }
+  return out.sort((a, b) => b.score - a.score || a.user.name.localeCompare(b.user.name)).slice(0, limit);
+}
 
 export function sendFriendRequest(otherId: string): Result {
   const me = currentUser();
   const other = getUser(otherId);
   if (!me || !other) return fail('User not found.');
-  if (!canRequestFriend(otherId)) return fail('You can only request people you have seen on an invite.');
+  if (!canRequestFriend(otherId)) return fail('You can only request people you have seen on an invite or who were suggested to you.');
   st.friendRequests.push({ id: nid('fr'), fromId: me.id, toId: otherId, createdAt: Date.now() });
   notify(otherId, null, `${me.name} sent you a friend request`, Date.now(), 'friend');
   log(me.id, `You sent ${other.name} a friend request`);
@@ -192,7 +232,8 @@ export function lastPlayedWith(userId: string, otherId: string, now = Date.now()
 export function loginDemo(): void { st.currentUserId = 'u-demo'; emit(); }
 export function logout(): void { st.currentUserId = null; emit(); }
 
-export function completeOnboarding(profile: Omit<User, 'id' | 'avatarColor' | 'friendIds' | 'settings'>): Result {
+/** settings: what onboarding asked for (distance); the rest are defaults. */
+export function completeOnboarding(profile: Omit<User, 'id' | 'avatarColor' | 'friendIds' | 'settings'>, settings: Partial<Pick<Settings, 'maxDistance'>> = {}): Result {
   if (!profile.name.trim()) return fail('Please enter your name.');
   if (!profile.address.trim()) return fail('Please enter your address.');
   if (profile.motivations.length === 0) return fail('Pick at least one thing you are looking for.');
@@ -200,7 +241,7 @@ export function completeOnboarding(profile: Omit<User, 'id' | 'avatarColor' | 'f
   const colors = ['#e07a5f', '#3d85c6', '#81b29a', '#9b72cf', '#4aa3a2'];
   st.users[id] = {
     ...profile, id, avatarColor: colors[counter % colors.length], friendIds: [], // new users start with no friends
-    settings: defaultSettings(),
+    settings: { ...defaultSettings(), ...settings },
   };
   st.currentUserId = id;
   emit();

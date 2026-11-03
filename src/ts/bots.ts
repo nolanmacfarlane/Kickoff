@@ -1,5 +1,5 @@
 // Demo only: the other (fake) users react to what the signed-in user does, so the prototype feels alive.
-// - Friend requests the user sends are accepted after a few seconds.
+// - Friend requests the user sends are accepted after 20 to 45 seconds.
 // - Invites the user creates get a few joiners over the next several seconds (who say hello in the chat).
 // The signed-in user gets a toast for each (unless they turned that notification off).
 // Only reacts to things done after the app starts; seeded requests and invites are left alone.
@@ -9,7 +9,7 @@ import {
 import { toast } from './dom';
 import type { Invite } from './types';
 
-const FRIEND_DELAY: [number, number] = [2_000, 4_000];
+const FRIEND_DELAY: [number, number] = [20_000, 45_000];   // slow enough to feel like a real person seeing it later
 const FIRST_JOIN_DELAY: [number, number] = [3_000, 5_000];
 const NEXT_JOIN_DELAY: [number, number] = [4_000, 8_000];
 const MAX_BOT_JOINERS = 3;

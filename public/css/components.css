@@ -18,6 +18,8 @@
 .btn--sm { min-height: 34px; padding: 0 var(--s-3); font-size: var(--text-sm); }
 .btn--block { width: 100%; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn--requested { opacity: .45; }   /* looks like the disabled "Requested" button, but can still be tapped to undo */
+.btn--requested:hover { opacity: .7; }
 
 /* ---------- tags: facts about an invite ---------- */
 .tags { display: flex; flex-wrap: wrap; gap: var(--s-2); }

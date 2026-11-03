@@ -8,7 +8,7 @@ This is a medium-fidelity prototype built for a Human-Computer Interaction cours
 
 ## Features
 
-- **Onboarding.** A three-step setup asks for your area, why you want to play (exercise, social, competition, challenge, learning), the sports you play or want to try, and optionally your weekly schedule. You can choose **Skip with demo user** on any step to sign in as *Alex (demo)*, who already has friends, chats and history.
+- **Onboarding.** A five-step setup asks for your area and how far you'll travel, why you want to play (exercise, social, competition, challenge, learning), the sports you play or want to try, and optionally your weekly schedule (a synced calendar, or just when you're usually free). The last step suggests people to add as friends: people who play your sports (at your level first) or a sport you want to try, or who live in your area, within your travel distance. You can choose **Skip with demo user** on any step to sign in as *Alex (demo)*, who already has friends, chats and history.
 - **Home.** Up to three suggested invites, a map of what's nearby, what your friends are going to, and recent activity.
 - **Map.** A full-screen map of open invites with filters. Invites at the same venue share one pin with a count.
 - **Create invite.** Pick a sport, place, time, capacity and skill levels. Vibe (casual or competitive), visibility (open or friends only) and gear notes are optional. Your usual choices can be saved as defaults.
@@ -27,7 +27,7 @@ This is a medium-fidelity prototype built for a Human-Computer Interaction cours
 
 ### How suggestions are ranked
 
-Suggestions are scored in [src/ts/match.ts](src/ts/match.ts). An invite gets points for a sport you play or want to try, a matching skill level (beginner-friendly invites count if you're new to the sport), fitting your schedule, friends who are going, a vibe that suits your goals, gear you can borrow, and a venue in your area. It loses points if it clashes with your schedule. The tags that matched are highlighted on the invite card so you can see why it was suggested.
+Suggestions are scored in [src/ts/match.ts](src/ts/match.ts). An invite gets points for a sport you play or want to try, a matching skill level (beginner-friendly invites count if you're new to the sport), fitting your schedule (your synced calendar, or the times you said you're usually free), friends who are going, a vibe that suits your goals, gear you can borrow, and a venue in your area. It loses points if it clashes with your schedule. The tags that matched are highlighted on the invite card so you can see why it was suggested.
 
 ## Getting started
 

@@ -1,8 +1,9 @@
 // Recommendation scoring. Inputs: sport, skill level and schedule (plus friends, vibe, gear, area).
 // Every score comes with the matching keys, so the UI can highlight the tags that match the user's profile.
+import { freeTimeOptions } from './data';
 import { withinDistance } from './geo';
 import { getSport, getVenue, mapInvites } from './state';
-import type { BusyBlock, Invite, Skill, User } from './types';
+import type { BusyBlock, FreeTime, Invite, Skill, User } from './types';
 
 export type MatchKey = 'sport' | 'skill' | 'schedule' | 'vibe' | 'gear' | 'friends' | 'area';
 export interface MatchResult { score: number; keys: Set<MatchKey>; skill?: Skill }
@@ -13,6 +14,14 @@ export function busyConflict(inv: Invite, calendar: BusyBlock[]): BusyBlock | nu
   const from = s.getHours() + s.getMinutes() / 60;
   const to = e.toDateString() === s.toDateString() ? e.getHours() + e.getMinutes() / 60 : 24;
   return calendar.find((b) => b.day === s.getDay() && b.startHour < to && b.endHour > from) ?? null;
+}
+
+/** Does the invite start inside one of the picked free-time slots? */
+export function inFreeTime(inv: Invite, slots: FreeTime[]): boolean {
+  const s = new Date(inv.start);
+  const weekend = s.getDay() === 0 || s.getDay() === 6;
+  const hour = s.getHours() + s.getMinutes() / 60;
+  return freeTimeOptions.some((o) => slots.includes(o.id) && o.weekend === weekend && o.from <= hour && hour < o.to);
 }
 
 export function matchInvite(inv: Invite, user: User): MatchResult {
@@ -35,7 +44,7 @@ export function matchInvite(inv: Invite, user: User): MatchResult {
   if (user.calendar) {
     if (busyConflict(inv, user.calendar)) score -= 3;
     else { keys.add('schedule'); score += 2; }
-  }
+  } else if (user.freeTimes.length && inFreeTime(inv, user.freeTimes)) { keys.add('schedule'); score += 2; }   // no calendar: use the free-time chips
 
   if (inv.memberIds.some((id) => user.friendIds.includes(id))) { keys.add('friends'); score += 2; }
 

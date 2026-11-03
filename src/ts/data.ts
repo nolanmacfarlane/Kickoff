@@ -1,6 +1,6 @@
 // Fake data for the prototype. Real Greater Victoria geography, but people, invites, hours and several
 // venue names are invented, and venue coordinates are approximate.
-import type { BusyBlock, Invite, LatLng, Motivation, Settings, Skill, Sport, User, Venue } from './types';
+import type { BusyBlock, FreeTime, Invite, LatLng, Motivation, Settings, Skill, Sport, User, Venue } from './types';
 
 const HOUR = 3_600_000;
 
@@ -123,6 +123,16 @@ export const motivationOptions: { id: Motivation; label: string; hint: string }[
   { id: 'learn', label: 'Learn', hint: 'Try something new' },
 ];
 
+/** Free-time chips. Hours are [from, to) by start time of the meetup. */
+export const freeTimeOptions: { id: FreeTime; weekend: boolean; label: string; from: number; to: number }[] = [
+  { id: 'weekday-morning', weekend: false, label: 'Mornings', from: 6, to: 12 },
+  { id: 'weekday-afternoon', weekend: false, label: 'Afternoons', from: 12, to: 17 },
+  { id: 'weekday-evening', weekend: false, label: 'Evenings', from: 17, to: 24 },
+  { id: 'weekend-morning', weekend: true, label: 'Mornings', from: 6, to: 12 },
+  { id: 'weekend-afternoon', weekend: true, label: 'Afternoons', from: 12, to: 17 },
+  { id: 'weekend-evening', weekend: true, label: 'Evenings', from: 17, to: 24 },
+];
+
 /** What "sync my calendar" fills in. Fake, weekly, day 0 = Sunday. */
 export const sampleCalendar: BusyBlock[] = [
   { day: 1, startHour: 9, endHour: 15, label: 'Classes' }, { day: 2, startHour: 12, endHour: 16, label: 'Work' },
@@ -136,7 +146,7 @@ export function seedUsers(): Record<string, User> {
   const mk = (id: string, name: string, i: number, area: string, cur: [string, Skill][], friends: string[]): User => {
     const c = areaCenters[area];
     return { id, name, avatarColor: palette[i % palette.length], address: `${area}, Victoria`, area, lat: c.lat, lng: c.lng, motivations: ['exercise', 'social'],
-      currentSports: cur.map(([sportId, skill]) => ({ sportId, skill })), desiredSports: [], calendar: null, friendIds: friends, settings: defaultSettings() };
+      currentSports: cur.map(([sportId, skill]) => ({ sportId, skill })), desiredSports: [], calendar: null, freeTimes: [], friendIds: friends, settings: defaultSettings() };
   };
   const demoAddress = '1250 Fairfield Rd, Victoria';
   const g = geocode(demoAddress);
@@ -144,7 +154,7 @@ export function seedUsers(): Record<string, User> {
     { id: 'u-demo', name: 'Alex (demo)', avatarColor: palette[1], address: demoAddress, area: g.area, lat: g.lat, lng: g.lng, motivations: ['exercise', 'social', 'learn'],
       currentSports: [{ sportId: 'soccer', skill: 'Intermediate' }, { sportId: 'bouldering', skill: 'Beginner' }], desiredSports: ['baseball', 'running'],
       calendar: [{ day: 1, startHour: 9, endHour: 15, label: 'Classes' }, { day: 3, startHour: 9, endHour: 15, label: 'Classes' }, { day: 5, startHour: 9, endHour: 17, label: 'Work' }],
-      friendIds: ['u-maya', 'u-tom'], settings: defaultSettings() },
+      freeTimes: [], friendIds: ['u-maya', 'u-tom'], settings: defaultSettings() },
     mk('u-maya', 'Maya', 0, 'James Bay', [['soccer', 'Intermediate']], ['u-demo']),
     mk('u-chen', 'Chen', 2, 'Gordon Head', [['soccer', 'Advanced']], []),
     mk('u-priya', 'Priya', 4, 'Downtown', [['bouldering', 'Intermediate']], []),

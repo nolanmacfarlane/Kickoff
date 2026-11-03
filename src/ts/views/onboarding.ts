@@ -1,27 +1,59 @@
-// Onboarding wizard: 3 short steps with a slide between them. "Skip with demo user" is on every step.
+// Onboarding wizard: 5 short steps with a slide between them. "Skip with demo user" is on every step.
 import { blankDraft, calendarField, draftToProfile, identityFields, motivationField, pendingSports, sportsField, type ProfileDraft } from '../components/profileFields';
-import { firstName, go, h, keepFocus, toast } from '../dom';
-import { completeOnboarding, loginDemo } from '../state';
+import { seg } from '../components/seg';
+import { avatar, firstName, go, h, keepFocus, toast } from '../dom';
+import { DISTANCES } from '../geo';
+import { completeOnboarding, loginDemo, sendFriendRequest, suggestFriends } from '../state';
+import type { MaxDistance } from '../types';
 import { openSportInfo } from './sportInfo';
+
+const UNITS = 'km';   // the default; it can be changed later in Personalization
 
 export function render(): HTMLElement {
   const d: ProfileDraft = blankDraft();
   let step = 0;
   let error = '';
   let dir: 'forward' | 'back' | null = null;   // set only when the step changes, so edits do not re-animate
+  let maxDistance: MaxDistance = 'any';          // saved to settings, not the profile
+  const picked = new Set<string>();              // people to send friend requests to once the account exists
   const root = h('div', { class: 'onboarding' });
-  const LAST = 2;
+  const LAST = 4;
+  const suggestions = () => suggestFriends(draftToProfile(d), maxDistance, UNITS);
 
   const titles = [
     ['Welcome to Kickoff', 'Tell us a little about you and we will suggest games that fit. It takes about a minute.'],
+    ['Why you play', 'We use this to suggest games with the right vibe.'],
     ['Your sports', 'Search for a sport and add it, then choose your level, or mark it as one you want to try.'],
-    ['Add your schedule', 'Optional. Connect a calendar so suggestions match when you are free.'],
+    ['Add your schedule', 'Optional. Connect a calendar, or tell us when you are usually free, so suggestions fit your week.'],
+    ['Find people to play with', 'Optional. These people play your sports near you. Add a few and see the games they are going to.'],
   ];
 
+  const distanceField = () => h('div', { class: 'field' }, h('span', { class: 'field__label' }, 'How far will you travel for a game?'),
+    seg<MaxDistance>('max-distance', (['near', 'mid', 'far', 'any'] as MaxDistance[]).map((v) => ({ value: v, label: v === 'any' ? 'Any distance' : `${DISTANCES[UNITS][v]} ${UNITS}` })),
+      maxDistance, (v) => { maxDistance = v; draw(); }),
+    h('span', { class: 'field__hint' }, 'From your address. You can change this later in Personalization.'));
+
+  function friendsField(): HTMLElement {
+    const list = suggestions();
+    if (!list.length) return h('div', { class: 'empty empty--tight' }, 'No one matches yet. You can add friends later from people you meet at games.');
+    return h('ul', { class: 'friend-list' }, list.map(({ user: u, reasons }) => {
+      const on = picked.has(u.id);
+      return h('li', { class: 'friend-row' }, avatar(u),
+        h('div', { class: 'grow' }, h('strong', {}, u.name), h('p', { class: 'card__meta' }, reasons.slice(0, 2).join(' · '))),
+        // same labels and look as Invite details. Requests are only sent on Finish, so "Requested" can still be tapped to undo.
+        h('button', { class: `btn btn--secondary btn--sm${on ? ' btn--requested' : ''}`, type: 'button', 'aria-pressed': on, dataset: { key: `friend-${u.id}` },
+          'aria-label': on ? `Cancel friend request to ${u.name}` : `Add ${u.name} as a friend`, title: on ? 'Tap to cancel' : undefined,
+          onClick: () => { if (on) picked.delete(u.id); else picked.add(u.id); draw(); } }, on ? 'Requested' : 'Add friend'));
+    }));
+  }
+
+
   function body(): HTMLElement {
-    if (step === 0) return h('div', { class: 'stack' }, identityFields(d), motivationField(d, draw));
-    if (step === 1) return sportsField(d, draw, openSportInfo);
-    return calendarField(d, draw);
+    if (step === 0) return h('div', { class: 'stack' }, identityFields(d), distanceField());
+    if (step === 1) return motivationField(d, draw);
+    if (step === 2) return sportsField(d, draw, openSportInfo);
+    if (step === 3) return calendarField(d, draw);
+    return friendsField();
   }
 
   function go_(to: number): void { dir = to > step ? 'forward' : 'back'; step = to; error = ''; draw(); }
@@ -31,14 +63,16 @@ export function render(): HTMLElement {
     if (step === 0) {
       if (!d.name.trim()) error = 'Enter your name to continue.';
       else if (!d.address.trim()) error = 'Enter your address to continue.';
-      else if (d.motivations.length === 0) error = 'Pick at least one thing you are looking for.';
       if (error) { dir = null; return draw(); }
     }
-    if (step === 1 && pendingSports(d).length) { error = `Choose a level for ${pendingSports(d).join(', ')}, or remove it.`; dir = null; return draw(); }
+    if (step === 1 && d.motivations.length === 0) { error = 'Pick at least one thing you are looking for.'; dir = null; return draw(); }
+    if (step === 2 && pendingSports(d).length) { error = `Choose a level for ${pendingSports(d).join(', ')}, or remove it.`; dir = null; return draw(); }
     if (step < LAST) return go_(step + 1);
-    const res = completeOnboarding(draftToProfile(d));
+    const res = completeOnboarding(draftToProfile(d), { maxDistance });
     if (!res.ok) { error = res.error; dir = null; return draw(); }
-    toast(`Welcome, ${firstName(d.name)}. Here are games that fit you.`);
+    // only people still suggested (going back and changing sports or distance can drop someone)
+    const sent = suggestions().filter((s) => picked.has(s.user.id) && sendFriendRequest(s.user.id).ok).length;
+    toast(`Welcome, ${firstName(d.name)}. Here are games that fit you.${sent ? ` Sent ${sent} friend request${sent > 1 ? 's' : ''}.` : ''}`);
     go('#/home');
   }
 
