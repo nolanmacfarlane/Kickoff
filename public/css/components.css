@@ -40,6 +40,28 @@
 .card--button:hover { border-color: var(--ink); }
 .card--selected { border-color: var(--primary); background: var(--primary-soft); }
 .card__title { font-family: var(--font-display); font-weight: 700; font-size: var(--text-lg); }
+.card__title-row { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--s-2); }
+
+/* The invite card (inviteCard): title, time and place left, people top right; tags; then "x/y going" and the hover actions. */
+.card-list { display: grid; gap: var(--s-3); }
+.invite-card { display: grid; gap: var(--s-2); padding: var(--s-3) var(--s-4); }
+.invite-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3); }
+.invite-card__when { font-weight: 600; }
+.invite-card__people { display: flex; align-items: center; gap: var(--s-2); flex: none; max-width: 45%; }
+.invite-card__names { font-size: var(--text-sm); font-weight: 500; color: var(--ink-2); text-align: right; overflow-wrap: anywhere; }
+.invite-card__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); min-height: 40px; }
+.invite-card__spots { font-size: var(--text-sm); color: var(--ink-2); }
+.tag--new { background: var(--bad); border-color: var(--bad); color: #fff; }   /* same red as the count badges */
+
+/* Whole card opens its details: the sport name is the real button, stretched over the card. Other controls sit above it. */
+.card--link { position: relative; transition: border-color .12s; }
+.card--link:hover { border-color: var(--ink); }
+.card--link.card--selected:hover { border-color: var(--primary); }
+.card-open { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.card-open::after { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
+.card-open:focus-visible { outline: none; }
+.card--link:has(.card-open:focus-visible) { outline: 2px solid var(--primary); outline-offset: 1px; }
+.card--link :is(button:not(.card-open), a, [title]) { position: relative; z-index: 1; }
 .card__meta { color: var(--ink-2); font-size: var(--text-sm); }
 .card__why { font-size: var(--text-sm); color: var(--ink-2); }   /* "why this matched" line */
 
@@ -92,7 +114,16 @@
 .icon-btn--filled:hover { background: var(--primary); color: var(--on-primary); }
 .link-btn { justify-self: start; padding-left: 0; }
 .icon-badge { position: relative; display: inline-flex; }
-.icon-badge .badge { position: absolute; top: -4px; right: -4px; pointer-events: none; }
+/* An invite's actions, bottom right of every invite card (see inviteActions) */
+.card-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--s-2); }
+/* With a mouse, actions appear on hover (or keyboard focus, or the selected card). They fade rather than disappear, so the card never changes size.
+   Touch screens can't hover, so they always show them. */
+@media (hover: hover) {
+  .card-actions { opacity: 0; transition: opacity 0.15s; }
+  .card:hover .card-actions, .card:focus-within .card-actions, .card--selected .card-actions { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .card-actions { transition: none; } }
+.icon-badge .badge { position: absolute; top: -4px; right: -4px; z-index: 2; pointer-events: none; }   /* above its button, which .card--link lifts to z-index 1 */
 
 /* ---------- modal (invite details, sport info) ---------- */
 .modal-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(20, 35, 31, .5); display: grid; place-items: center; padding: var(--s-4); }

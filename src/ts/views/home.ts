@@ -29,21 +29,22 @@ export function render(): HTMLElement {
   return h('div', {},
     h('div', { class: 'greeting' }, h('h1', {}, `Good ${part}, ${firstName(me.name)}`)),
     h('div', { class: 'cols' },
-      h('section', { 'aria-labelledby': 'rec-h' },
-        h('div', { class: 'section-head' }, h('h2', { id: 'rec-h' }, 'Suggested for you'), all.length > recs.length ? h('a', { href: '#/map' }, 'See more on the map') : null),
-        recs.length
-          ? h('div', { class: 'rec-list' }, recs.map((r) => inviteCard(r.invite, me, {
-              onOpen: () => openInvite(r.invite.id), onShowMap: () => go(`#/map/${r.invite.id}`), onAbout: () => openSportInfo(r.invite.sportId) })))
-          : h('div', { class: 'empty' }, h('h3', {}, 'No matching games yet'),
-              h('p', {}, 'Nobody has posted a game for your sports. Start one and others will find it.'),
-              h('a', { class: 'btn btn--primary', href: '#/create' }, 'Create an invite'))),
+      h('div', { class: 'stack' },
+        h('section', { 'aria-labelledby': 'rec-h' },
+          h('div', { class: 'section-head' }, h('h2', { id: 'rec-h' }, 'Suggested for you'), all.length > recs.length ? h('a', { href: '#/map' }, 'See more on the map') : null),
+          recs.length
+            ? h('div', { class: 'card-list' }, recs.map((r) => inviteCard(r.invite, me, {
+                onOpen: () => openInvite(r.invite.id), onShowMap: () => go(`#/map/${r.invite.id}`), onAbout: () => openSportInfo(r.invite.sportId) })))
+            : h('div', { class: 'empty' }, h('h3', {}, 'No matching games yet'),
+                h('p', {}, 'Nobody has posted a game for your sports. Start one and others will find it.'),
+                h('a', { class: 'btn btn--primary', href: '#/create' }, 'Create an invite'))),
+        h('section', { 'aria-labelledby': 'fp-h' },
+          h('div', { class: 'section-head' }, h('h2', { id: 'fp-h' }, "Friends' plans"), h('a', { href: '#/social/plans' }, 'See all')),
+          friendsPlansList(me, 3, openInvite, openSportInfo))),
       h('div', { class: 'stack' },
         h('section', { 'aria-labelledby': 'near-h' },
           h('div', { class: 'section-head' }, h('h2', { id: 'near-h' }, 'Invites nearby')),
           h('div', { class: 'mini-map' }, mini.el, h('a', { class: 'mini-map__link', href: '#/map', 'aria-label': 'Open the map of nearby invites' }))),
-        h('section', { 'aria-labelledby': 'fp-h' },
-          h('div', { class: 'section-head' }, h('h2', { id: 'fp-h' }, "Friends' plans"), h('a', { href: '#/social/plans' }, 'See all')),
-          friendsPlansList(me, 3, openInvite, openSportInfo)),
         h('section', { 'aria-labelledby': 'act-h' },
           h('div', { class: 'section-head' }, h('h2', { id: 'act-h' }, 'Recent activity')),
           activity.length

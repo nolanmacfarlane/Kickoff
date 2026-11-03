@@ -3,9 +3,9 @@
 import { friendsPlansList } from '../components/friendsPlans';
 import { seg, toggleBox } from '../components/seg';
 import { socialNav, type SocialTab } from '../components/socialNav';
-import { shareInvite } from '../components/share';
-import { sportLabel, uiIcon } from '../components/sportBits';
-import { avatar, type Child, confirmDialog, fmtAgo, fmtWhen, go, h, icon, keepFocus, toast } from '../dom';
+import { inviteCard } from '../components/inviteCard';
+import { uiIcon } from '../components/sportBits';
+import { avatar, type Child, confirmDialog, fmtAgo, go, h, keepFocus, toast } from '../dom';
 import { setRefresher } from '../nav';
 import {
   acceptFriendRequest, chatSummaries, currentUser, declineFriendRequest, directChatId, friendsPlans, getSport, getUser, incomingRequests, lastPlayedWith,
@@ -124,20 +124,8 @@ function flatten(c: Child[]): Node[] {
 
 // ---------- rows ----------
 
-function meetupRow(me: User, i: Invite, chatN: number): HTMLElement {
-  const n = unreadCount(me.id, i.id);
-  return h('article', { class: 'card meetup-row' },
-    h('div', { class: 'grow' }, sportLabel(i.sportId, { as: 'h3', className: 'card__title', onAbout: () => openSportInfo(i.sportId) }),
-      h('p', { class: 'card__meta' }, fmtWhen(i.start, i.end)), h('p', { class: 'card__meta' }, `${i.location.label}, ${i.memberIds.length}/${i.capacity} going`)),
-    h('div', { class: 'avatar-stack' }, i.memberIds.slice(0, 4).map((id) => avatar(getUser(id)!, 'sm'))),
-    h('button', { class: 'icon-btn icon-btn--filled', type: 'button', 'aria-label': `Share ${getSport(i.sportId)!.name}`, title: 'Share', onClick: () => shareInvite(i.id) }, uiIcon('share')),
-    h('span', { class: 'icon-badge' },
-      h('button', { class: 'icon-btn icon-btn--filled', type: 'button', 'aria-label': chatN ? `Group chat, ${chatN} unread` : 'Group chat', title: 'Group chat', onClick: () => go(`#/social/messages/${meetupChatId(i.id)}`) }, uiIcon('chat')),
-      chatN ? h('span', { class: 'badge', 'aria-hidden': 'true' }, String(chatN)) : null),
-    h('span', { class: 'icon-badge' },
-      h('button', { class: 'icon-btn icon-btn--filled', type: 'button', 'aria-label': n ? `View details, ${n} new update${n === 1 ? '' : 's'}` : 'View details', title: 'View details', onClick: () => openInvite(i.id) }, icon('info')),
-      n ? h('span', { class: 'badge', 'aria-hidden': 'true' }, String(n)) : null));
-}
+const meetupCard = (me: User, i: Invite): HTMLElement => inviteCard(i, me, {
+  people: { kind: 'members' }, hideGoingTag: true, onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) });
 const chatUnreadMap = (me: User) => new Map(chatSummaries(me.id).map((c) => [c.id, c.unread]));
 const noMeetups = () => h('div', { class: 'empty' }, h('h3', {}, 'No meetups yet'), h('p', {}, 'Join a game from the map or create your own.'), h('a', { class: 'btn btn--primary', href: '#/map' }, 'Find a game'));
 
@@ -179,13 +167,12 @@ function overview(): HTMLElement {
   const outgoing = outgoingRequests(me.id);
   const requests = [...incoming.map((r) => incomingRow(r)), ...outgoing.map((r) => outgoingRow(r))];
   markSeen('friend', 'friendInvite');   // requests and friends' new plans are previewed here, so they count as seen
-  const chatN = chatUnreadMap(me);
 
   return h('div', {}, socialNav('overview'),
     h('div', { class: 'cols' },
       h('div', { class: 'stack' },
         h('section', { 'aria-labelledby': 'mt-h' }, sectionHead('My meetups', 'mt-h', '#/social/meetups', upcoming.length),
-          upcoming.length ? h('div', { class: 'meetup-list' }, upcoming.slice(0, PREVIEW.meetups).map((i) => meetupRow(me, i, chatN.get(meetupChatId(i.id)) ?? 0))) : noMeetups()),
+          upcoming.length ? h('div', { class: 'card-list' }, upcoming.slice(0, PREVIEW.meetups).map((i) => meetupCard(me, i))) : noMeetups()),
         h('section', { 'aria-labelledby': 'fp-h' }, sectionHead("Friends' plans", 'fp-h', '#/social/plans', plans.length),
           friendsPlansList(me, PREVIEW.plans, openInvite, openSportInfo, plans))),
       h('div', { class: 'stack' },
@@ -220,7 +207,7 @@ function meetupsTab(): HTMLElement {
       const shown = all.filter((i) => (meetupF.sport === 'all' || i.sportId === meetupF.sport) && inTime(i.start, meetupF.time)
         && (!meetupF.unread || unread(i)) && matches(meetupF.q, inviteWords(i)));
       return [countLine(shown.length, all.length, filtered(), clear),
-        shown.length ? h('div', { class: 'meetup-list' }, shown.map((i) => meetupRow(me, i, chatN.get(meetupChatId(i.id)) ?? 0))) : noMatch('meetups', clear)];
+        shown.length ? h('div', { class: 'card-list' }, shown.map((i) => meetupCard(me, i))) : noMatch('meetups', clear)];
     },
   });
   return el;

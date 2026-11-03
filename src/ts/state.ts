@@ -346,6 +346,11 @@ const chatUnread = (userId: string, chatId: string): number => {
   const readAt = st.chatReads[userId]?.[chatId] ?? 0;
   return st.messages.filter((m) => m.chatId === chatId && m.senderId !== null && m.senderId !== userId && m.at > readAt).length;
 };
+/** Unread messages in an invite's group chat, or null if this user can't open it (not a member). */
+export function meetupChatUnread(userId: string, inviteId: string): number | null {
+  const id = meetupChatId(inviteId);
+  return chatAccess(id, userId) ? chatUnread(userId, id) : null;
+}
 
 /** Every friend (so you can start a chat) and every meetup you are in (or were in, if it has messages). Newest first. */
 export function chatSummaries(userId: string, now = Date.now()): ChatSummary[] {

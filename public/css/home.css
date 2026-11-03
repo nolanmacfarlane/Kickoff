@@ -1,15 +1,9 @@
 /* Home: greeting, recommended invites, mini map, recent activity.
-   Class vocabulary: .greeting .rec-list .rec-card .mini-map .mini-map__link .activity-list .activity-export */
+   Class vocabulary: .greeting .mini-map .mini-map__link .activity-list .activity-export */
 .greeting h1 { font-size: var(--text-3xl); }
 .greeting p { margin-top: var(--s-2); color: var(--ink-2); font-size: var(--text-lg); }
 .greeting { margin-bottom: var(--s-6); }
 
-.rec-list { display: grid; gap: var(--s-3); }
-.rec-card { display: grid; gap: var(--s-3); }
-.rec-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3); }
-.rec-card__when { font-weight: 600; }
-.rec-card__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
-.rec-card__spots { font-size: var(--text-sm); color: var(--ink-2); }
 
 .activity-list { display: grid; }
 .activity-list li { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) 0; border-bottom: 1px solid var(--line); font-size: var(--text-sm); }
@@ -26,12 +20,3 @@
 .mini-map__link:hover { box-shadow: inset 0 0 0 3px var(--primary); }
 
 
-/* Friends' plans (Home and Social) */
-.friend-plans { display: grid; gap: var(--s-2); }
-.friend-plan { display: flex; align-items: center; gap: var(--s-3); }
-.friend-plan__who { font-weight: 600; font-size: var(--text-sm); }
-.friend-plan__what { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--s-3); }
-
-/* Host: small avatar with the name underneath, top right of the card */
-.rec-card__host { display: grid; justify-items: center; gap: 2px; flex: none; max-width: 76px; text-align: center; }
-.rec-card__host-name { font-size: var(--text-xs); color: var(--ink-2); line-height: 1.2; overflow-wrap: anywhere; }

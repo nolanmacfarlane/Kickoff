@@ -112,7 +112,7 @@ export function render(args: string[]): HTMLElement {
         h('strong', {}, many ? `${shown.length} invites at ${group.label}` : group.label),
         iconButton('close', 'Close', clearSelection, 'icon-btn--sm')),
       h('div', { class: 'map-pop__cards' },
-        shown.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))));
+        shown.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onShowMap: false, onAbout: () => openSportInfo(i.sportId) }))));
     popup.setLatLng([group.lat, group.lng]).setContent(body);
     if (handle.map.hasLayer(popup)) popup.update();
     else handle.onSized(() => { if (popup.getContent() === body) handle.map.openPopup(popup); });   // autopan needs a sized map
