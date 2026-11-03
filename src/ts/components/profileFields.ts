@@ -1,6 +1,6 @@
 // Profile inputs shared by onboarding and the Profile tab. They edit a draft object, then call redraw().
 import { geocode, motivationOptions, sampleCalendar, SKILLS, sportMatches, sports } from '../data';
-import { append, h, iconButton } from '../dom';
+import { append, fmtHour, h, iconButton } from '../dom';
 import type { BusyBlock, Motivation, Skill, Sport, User } from '../types';
 import { toggleBox } from './seg';
 import { sportIcon, sportLabel, uiIcon } from './sportBits';
@@ -139,15 +139,15 @@ export function sportsField(d: ProfileDraft, redraw: () => void, onAbout: (sport
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const hr = (n: number) => (n === 12 ? '12 pm' : n > 12 ? `${n - 12} pm` : `${n} am`);
 
-export function calendarField(d: ProfileDraft, redraw: () => void): HTMLElement {
+/** weekStart: 0 = Sunday first, 1 = Monday first (Personalization setting). */
+export function calendarField(d: ProfileDraft, redraw: () => void, weekStart: 0 | 1 = 1): HTMLElement {
   const on = d.calendar !== null;
-  const order = [1, 2, 3, 4, 5, 6, 0];
+  const order = Array.from({ length: 7 }, (_, i) => (i + weekStart) % 7);
   const grid = on ? h('div', { class: 'calendar-grid', role: 'img', 'aria-label': 'Weekly calendar with busy times shaded' },
     h('span', {}), order.map((day) => h('strong', {}, DAY_NAMES[day].slice(0, 3))),
     Array.from({ length: 13 }, (_, i) => i + 8).map((hour) => [
-      h('span', {}, hr(hour)),
+      h('span', {}, fmtHour(hour)),
       order.map((day) => h('span', { class: `cell ${d.calendar!.some((b) => b.day === day && b.startHour <= hour && hour < b.endHour) ? 'cell--busy' : ''}`.trim() })),
     ])) : null;
   return h('div', { class: 'stack' },

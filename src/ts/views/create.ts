@@ -15,26 +15,29 @@ interface Form {
 }
 let form: Form | null = null;
 let formUser = '';
+let formPristine = '';   // the form as it was first filled in; while untouched, it follows changes to your invite defaults
 let error = '';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const dateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const timeStr = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
+/** A fresh form, starting from the invite defaults in Personalization. */
 function defaults(): Form {
   const me = currentUser()!;
+  const def = me.settings.inviteDefaults;
   const t = new Date(Date.now() + 2 * 3_600_000); t.setMinutes(0, 0, 0);
-  const e = new Date(t.getTime() + 90 * 60_000);
-  const sportId = me.currentSports[0]?.sportId ?? me.desiredSports[0] ?? sports[0].id;
+  const e = new Date(t.getTime() + def.durationMin * 60_000);
+  const sportId = (def.sportId && getSport(def.sportId) ? def.sportId : null) ?? me.currentSports[0]?.sportId ?? me.desiredSports[0] ?? sports[0].id;
   return {
     sportId, location: null, spotName: '', date: dateStr(t), start: timeStr(t), end: dateStr(e) === dateStr(t) ? timeStr(e) : '23:59', recurring: false,
-    capacity: 4, skills: [me.currentSports.find((s) => s.sportId === sportId)?.skill ?? 'Beginner'], vibe: 'Casual', visibility: 'open',
+    capacity: def.capacity, skills: [me.currentSports.find((s) => s.sportId === sportId)?.skill ?? 'Beginner'], vibe: def.vibe, visibility: def.visibility,
     gearOn: false, gearText: '', notes: '',
   };
 }
 function ensureForm(): Form {
   const me = currentUser()!;
-  if (!form || formUser !== me.id) { form = defaults(); formUser = me.id; error = ''; }
+  if (!form || formUser !== me.id || JSON.stringify(form) === formPristine) { form = defaults(); formUser = me.id; formPristine = JSON.stringify(form); error = ''; }
   return form;
 }
 

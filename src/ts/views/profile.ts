@@ -3,11 +3,14 @@ import { inviteCard } from '../components/inviteCard';
 import {
   calendarField, draftFromUser, draftToProfile, identityFields, motivationField, pendingSports, sportsField, type ProfileDraft,
 } from '../components/profileFields';
+import { saveBar, unsavedMark, watchEdits } from '../components/saveBar';
 import { seg } from '../components/seg';
+import { sports } from '../data';
+import { DISTANCES, distanceLabel } from '../geo';
 import { avatar, confirmDialog, fmtAgo, go, h, keepFocus, toast } from '../dom';
-import { setGuard } from '../nav';
-import type { ActivityItem } from '../types';
-import { activityFor, currentUser, logout, myPast, myUpcoming, updateProfile, updateSettings } from '../state';
+import { getGuard, setGuard } from '../nav';
+import type { ActivityItem, MaxDistance, Settings, Vibe, Visibility } from '../types';
+import { activityFor, currentUser, logout, MAX_CAPACITY, MIN_CAPACITY, myPast, myUpcoming, updateProfile, updateSettings } from '../state';
 import { openInvite } from './inviteDetail';
 import { openSportInfo } from './sportInfo';
 
@@ -21,54 +24,118 @@ function profileEditor(): HTMLElement {
   if (!editing || editing.userId !== me.id) { const d = draftFromUser(me); editing = { userId: me.id, initial: JSON.stringify(d), draft: d }; }
   const ed = editing;
   const d = ed.draft;
-  let error = '';
   const root = h('div', {});
   const dirty = () => JSON.stringify(d) !== ed.initial;
+  const fail = (msg: string) => { bar.setError(msg); return false; };
 
   function save(): boolean {
-    if (!d.name.trim()) { error = 'Add your name.'; draw(); return false; }
-    if (!d.address.trim()) { error = 'Add your address.'; draw(); return false; }
-    if (d.motivations.length === 0) { error = 'Pick at least one thing you are looking for.'; draw(); return false; }
-    if (pendingSports(d).length) { error = `Choose a level for ${pendingSports(d).join(', ')}, or remove it.`; draw(); return false; }
+    if (!d.name.trim()) return fail('Add your name.');
+    if (!d.address.trim()) return fail('Add your address.');
+    if (d.motivations.length === 0) return fail('Pick at least one thing you are looking for.');
+    if (pendingSports(d).length) return fail(`Choose a level for ${pendingSports(d).join(', ')}, or remove it.`);
     editing = null; setGuard(null);              // clear first: updateProfile triggers a re-render
     const res = updateProfile(draftToProfile(d));
-    if (!res.ok) { editing = ed; error = res.error; draw(); return false; }
+    if (!res.ok) { editing = ed; return fail(res.error); }
     toast('Profile saved. Your suggestions are updated.');
     return true;
   }
+  const bar = saveBar({ section: 'profile', isDirty: dirty, onSave: save,
+    onDiscard: () => { editing = null; page.replaceWith(profileEditor()); toast('Changes discarded.'); } });
   setGuard({ isDirty: dirty, save, discard: () => { editing = null; } });
 
   function draw(): void {
     keepFocus(() => root.replaceChildren(h('div', { class: 'stack' },
       h('section', { class: 'card stack' }, h('h2', {}, 'About you'), identityFields(d), motivationField(d, draw)),
       h('section', { class: 'card stack' }, h('h2', {}, 'Sports'), sportsField(d, draw, openSportInfo)),
-      h('section', { class: 'card stack' }, h('h2', {}, 'Schedule'), calendarField(d, draw)),
-      error ? h('p', { class: 'notice notice--error', role: 'alert' }, error) : null,
-      h('div', {}, h('button', { class: 'btn btn--primary', type: 'button', onClick: save }, 'Save changes')))));
+      h('section', { class: 'card stack' }, h('h2', {}, 'Schedule'), calendarField(d, draw, me.settings.weekStart)))));
+    bar.refresh();
   }
+  const page = h('div', { class: 'editor' }, root, bar.el);
+  watchEdits(root, bar.refresh);
   draw();
-  return root;
+  return page;
 }
+
+// Same pattern as the profile editor: changes go into a draft and only apply when saved.
+let settingsEdit: { userId: string; initial: string; draft: Settings } | null = null;
 
 function personalization(): HTMLElement {
   const me = currentUser()!;
-  const s = me.settings;
-  const toggle = (key: 'joins' | 'leaves' | 'friends' | 'messages' | 'friendInvites', label: string, hint: string) =>
-    h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: s.notify[key], dataset: { key: `notify-${key}` }, onChange: (e: Event) => { updateSettings({ notify: { [key]: (e.target as HTMLInputElement).checked } }); } }),
+  if (!settingsEdit || settingsEdit.userId !== me.id) {
+    const d: Settings = structuredClone(me.settings);
+    settingsEdit = { userId: me.id, initial: JSON.stringify(d), draft: d };
+  }
+  const ed = settingsEdit;
+  const s = ed.draft;
+  const root = h('div', {});
+  const dirty = () => JSON.stringify(s) !== ed.initial;
+
+  function save(): boolean {
+    const cap = s.inviteDefaults.capacity;
+    if (!Number.isInteger(cap) || cap < MIN_CAPACITY || cap > MAX_CAPACITY) { bar.setError(`Group size must be a whole number from ${MIN_CAPACITY} to ${MAX_CAPACITY}.`); return false; }
+    settingsEdit = null; setGuard(null);         // clear first: updateSettings triggers a re-render
+    const res = updateSettings(s);
+    if (!res.ok) { settingsEdit = ed; bar.setError(res.error); return false; }
+    toast('Personalization saved.');
+    return true;
+  }
+  const bar = saveBar({ section: 'personalization', isDirty: dirty, onSave: save,
+    onDiscard: () => { settingsEdit = null; page.replaceWith(personalization()); toast('Changes discarded.'); } });
+  setGuard({ isDirty: dirty, save, discard: () => { settingsEdit = null; } });
+
+  /** Change the draft and redraw (hints depend on the chosen values). */
+  const set = (fn: () => void) => () => { fn(); draw(); };
+  const toggle = (key: keyof Settings['notify'], label: string, hint: string) =>
+    h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: s.notify[key], dataset: { key: `notify-${key}` }, onChange: (e: Event) => { s.notify[key] = (e.target as HTMLInputElement).checked; } }),
       h('span', { class: 'check__text' }, label, h('small', {}, hint)));
-  return h('div', { class: 'stack' },
-    h('section', { class: 'card stack' }, h('h2', {}, 'Appearance'),
-      h('div', { class: 'field' }, h('span', { class: 'field__label' }, 'Theme'),
-        seg('theme', [{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }], s.theme, (v) => updateSettings({ theme: v })))),
-    h('section', { class: 'card stack' }, h('h2', {}, 'Distance'),
-      h('div', { class: 'field' }, h('span', { class: 'field__label' }, 'Show distances in'),
-        seg('units', [{ value: 'km', label: 'Kilometres' }, { value: 'mi', label: 'Miles' }], s.units, (v) => updateSettings({ units: v })))),
-    h('section', { class: 'card stack' }, h('h2', {}, 'Notifications'),
-      toggle('joins', 'Someone joins my meetup', 'Includes when a meetup fills up.'),
-      toggle('leaves', 'Someone leaves my meetup', 'Changes apply straight away.'),
-      toggle('friends', 'Friend requests', 'New requests and when yours is accepted.'),
-      toggle('friendInvites', 'Friends create an invite', 'When a friend starts a meetup you can see.'),
-      toggle('messages', 'New messages', 'Counts unread chats in the Social tab badge.')));
+  const field = (label: string, control: Node, hint?: string) =>
+    h('div', { class: 'field' }, h('span', { class: 'field__label' }, label), control, hint ? h('span', { class: 'field__hint' }, hint) : null);
+  const select = (key: string, label: string, value: string, opts: [string, string][], onPick: (v: string) => void) =>
+    h('label', { class: 'field' }, h('span', { class: 'field__label' }, label),
+      h('select', { class: 'select', value, dataset: { key }, onChange: (e: Event) => onPick((e.target as HTMLSelectElement).value) },
+        opts.map(([v, l]) => h('option', { value: v }, l))));
+  const mine = me.currentSports.map((x) => x.sportId);
+  const sportOpts: [string, string][] = [['', 'My first sport'],
+    ...[...sports].sort((a, b) => Number(mine.includes(b.id)) - Number(mine.includes(a.id))).map((x): [string, string] => [x.id, x.name])];   // your sports first
+  const mapStartHint: Record<Settings['mapStart'], string> = {
+    last: 'Picks up where you last panned and zoomed.', home: 'Always starts centred on your address.', invites: 'Zooms to fit every invite that passes your filters.' };
+
+  function draw(): void {
+    const def = s.inviteDefaults;
+    keepFocus(() => root.replaceChildren(h('div', { class: 'stack' },
+      h('section', { class: 'card stack' }, h('h2', {}, 'Appearance'),
+        field('Theme', seg('theme', [{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }], s.theme, (v) => set(() => { s.theme = v; })()))),
+      h('section', { class: 'card stack' }, h('h2', {}, 'Date and time'),
+        field('Time format', seg('time-format', [{ value: '12h', label: '12-hour (3:00 PM)' }, { value: '24h', label: '24-hour (15:00)' }], s.timeFormat, (v) => set(() => { s.timeFormat = v; })())),
+        field('Week starts on', seg<'0' | '1'>('week-start', [{ value: '0', label: 'Sunday' }, { value: '1', label: 'Monday' }], String(s.weekStart) as '0' | '1', (v) => set(() => { s.weekStart = v === '0' ? 0 : 1; })()),
+          'Used by your schedule and the "This week" map filter.')),
+      h('section', { class: 'card stack' }, h('h2', {}, 'Distance and map'),
+        field('Show distances in', seg('units', [{ value: 'km', label: 'Kilometres' }, { value: 'mi', label: 'Miles' }], s.units, (v) => set(() => { s.units = v; })())),
+        field('Show invites within', seg<MaxDistance>('max-distance', (['near', 'mid', 'far', 'any'] as MaxDistance[]).map((d) => ({ value: d, label: d === 'any' ? 'Any distance' : `${DISTANCES[s.units][d]} ${s.units}` })), s.maxDistance, (v) => set(() => { s.maxDistance = v; })()),
+          s.maxDistance === 'any' ? 'Suggestions and the map include every invite in the area.' : `Suggestions on Home and the Map list only include invites ${distanceLabel(s.maxDistance, s.units).toLowerCase()} of your address. You can change it for a moment with the map's Distance filter.`),
+        field('Map opens at', seg<Settings['mapStart']>('map-start', [{ value: 'last', label: 'Where I left it' }, { value: 'home', label: 'My area' }, { value: 'invites', label: 'All invites' }], s.mapStart, (v) => set(() => { s.mapStart = v; })()),
+          mapStartHint[s.mapStart])),
+      h('section', { class: 'card stack' }, h('h2', {}, 'New invites'),
+        h('p', { class: 'field__hint' }, 'The Create form starts with these. You can still change anything on each invite.'),
+        select('def-sport', 'Sport', def.sportId ?? '', sportOpts, (v) => { def.sportId = v || null; }),
+        select('def-length', 'Length', String(def.durationMin), [['60', '1 hour'], ['90', '1.5 hours'], ['120', '2 hours'], ['180', '3 hours']], (v) => { def.durationMin = Number(v); }),
+        h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Group size, including you'),
+          h('input', { class: 'input input--narrow', type: 'number', min: MIN_CAPACITY, max: MAX_CAPACITY, value: Number.isNaN(def.capacity) ? '' : String(def.capacity), dataset: { key: 'def-capacity' },
+            onInput: (e: Event) => { def.capacity = parseInt((e.target as HTMLInputElement).value, 10); } })),
+        field('Vibe', seg<Vibe>('def-vibe', [{ value: 'Casual', label: 'Casual' }, { value: 'Competitive', label: 'Competitive' }], def.vibe, (v) => set(() => { def.vibe = v; })())),
+        field('Who can see it', seg<Visibility>('def-vis', [{ value: 'open', label: 'Open to everyone' }, { value: 'friends', label: 'Friends only' }], def.visibility, (v) => set(() => { def.visibility = v; })()))),
+      h('section', { class: 'card stack' }, h('h2', {}, 'Notifications'),
+        toggle('joins', 'Someone joins my meetup', 'Includes when a meetup fills up.'),
+        toggle('leaves', 'Someone leaves my meetup', 'Changes apply straight away.'),
+        toggle('friends', 'Friend requests', 'New requests and when yours is accepted.'),
+        toggle('friendInvites', 'Friends create an invite', 'When a friend starts a meetup you can see.'),
+        toggle('messages', 'New messages', 'Counts unread chats in the Social tab badge.')))));
+    bar.refresh();
+  }
+  const page = h('div', { class: 'editor' }, root, bar.el);
+  watchEdits(root, bar.refresh);
+  draw();
+  return page;
 }
 
 const FAQS: [string, string][] = [
@@ -128,14 +195,15 @@ export function render(args: string[]): HTMLElement {
 
   const askLogout = () => confirmDialog({
     title: 'Log out?', body: 'You will go back to the welcome screen.',
-    actions: [{ label: 'Stay logged in' }, { label: 'Log out', variant: 'danger', onClick: () => { editing = null; setGuard(null); logout(); go('#/home'); toast('You are logged out.'); } }],
+    actions: [{ label: 'Stay logged in' }, { label: 'Log out', variant: 'danger', onClick: () => { editing = null; settingsEdit = null; setGuard(null); logout(); go('#/home'); toast('You are logged out.'); } }],
   });
 
   return h('div', {},
     h('div', { class: 'profile-head' }, avatar(me, 'xl'), h('div', {}, h('h1', {}, me.name), h('p', { class: 'muted' }, `${count} meetup${count === 1 ? '' : 's'}`))),
     h('div', { class: 'profile-layout' },
       h('nav', { class: 'card menu-list', 'aria-label': 'Profile sections' },
-        SECTIONS.map(([id, label]) => h('a', { href: id === 'profile' ? '#/profile' : `#/profile/${id}`, 'aria-current': id === section ? 'page' : null }, label)),
+        SECTIONS.map(([id, label]) => h('a', { href: id === 'profile' ? '#/profile' : `#/profile/${id}`, 'aria-current': id === section ? 'page' : null, dataset: { section: id } },
+          label, id === 'profile' || id === 'personalization' ? unsavedMark(id === section && !!getGuard()?.isDirty()) : null)),
         h('button', { class: 'is-danger', type: 'button', onClick: askLogout }, 'Log out')),
       content));
 }

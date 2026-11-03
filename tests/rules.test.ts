@@ -1,5 +1,7 @@
 // Quick checks of the invite and friend rules. Run: npm test
 import * as S from '../src/ts/state';
+import { distanceKm, maxDistanceKm } from '../src/ts/geo';
+import { recommend } from '../src/ts/match';
 
 let failed = 0;
 function check(name: string, cond: boolean) { console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}`); if (!cond) failed++; }
@@ -148,6 +150,19 @@ check("their plans leave Friends' plans", S.friendsPlans(demo).every((p) => !p.f
 check('the removed friend is not notified', !S.notificationsFor('u-maya').some((n) => n.text.includes('remove')));
 check('cannot remove someone who is not a friend', !S.removeFriend('u-maya').ok);
 check('can send a new request later', S.canRequestFriend('u-maya'));
+
+// ---- personalization settings ----
+S.initState(); S.loginDemo();
+const me = () => S.currentUser()!;
+S.updateSettings({ inviteDefaults: { capacity: 8 } });
+check('invite defaults merge (other fields kept)', me().settings.inviteDefaults.capacity === 8 && me().settings.inviteDefaults.durationMin === 90);
+check('distance setting defaults to any', me().settings.maxDistance === 'any');
+check('3 mi is about 4.8 km', Math.abs(maxDistanceKm('mid', 'mi')! - 4.83) < 0.01);
+const allRecs = recommend(me(), 100);
+S.updateSettings({ maxDistance: 'near' });
+const nearRecs = recommend(me(), 100);
+check('near limit drops far suggestions', nearRecs.length <= allRecs.length && nearRecs.every((r) => distanceKm(me(), r.invite.location) <= 2));
+check('suggestions still come back with any distance', allRecs.some((r) => distanceKm(me(), r.invite.location) > 2) ? nearRecs.length < allRecs.length : true);
 
 console.log(failed === 0 ? '\nAll rules pass.' : `\n${failed} failing.`);
 if (failed) throw new Error(`${failed} rule check(s) failed`);

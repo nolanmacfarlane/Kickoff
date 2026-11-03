@@ -7,27 +7,33 @@ import { uiIcon } from '../components/sportBits';
 import { mapWidget } from '../components/mapWidget';
 import { groupInvites, groupKey, groupPins, type PinGroup } from '../components/pinGroups';
 import { sports } from '../data';
+import { DISTANCES, distanceLabel, withinDistance } from '../geo';
 import { append, h, iconButton, keepFocus } from '../dom';
 import { currentUser, getInvite, getSport, mapInvites } from '../state';
-import type { Invite } from '../types';
+import type { Invite, MaxDistance, User } from '../types';
 import { openInvite } from './inviteDetail';
 import { openSportInfo } from './sportInfo';
 import { setRefresher } from '../nav';
 
-const filters = { sport: 'all', time: 'any', gear: 'any' };   // survives re-renders and tab switches
+// Survives re-renders and tab switches. distance null = use the "Show invites within" setting from Personalization.
+const filters: { sport: string; time: string; gear: string; distance: MaxDistance | null } = { sport: 'all', time: 'any', gear: 'any', distance: null };
+const resetFilters = () => { filters.sport = 'all'; filters.time = 'any'; filters.gear = 'any'; filters.distance = null; };
 const DAY = 86_400_000;
 let listOpen = true;                                          // is the invites panel showing? (kept while you move between tabs)
 
-function passesTime(inv: Invite): boolean {
+function passesTime(inv: Invite, weekStart: number): boolean {
   const start = new Date(); start.setHours(0, 0, 0, 0);
   const days = Math.floor((inv.start - start.getTime()) / DAY);
   if (filters.time === 'today') return days === 0;
   if (filters.time === 'tomorrow') return days === 1;
+  if (filters.time === 'thisweek') return days >= 0 && days < 7 - ((start.getDay() - weekStart + 7) % 7);   // until the end of this calendar week
   if (filters.time === 'week') return days >= 0 && days < 7;
   return true;
 }
-const passesFilters = (i: Invite) =>
-  (filters.sport === 'all' || i.sportId === filters.sport) && passesTime(i) && (filters.gear === 'any' || i.gear.available);
+const distanceOf = (me: User): MaxDistance => filters.distance ?? me.settings.maxDistance;
+const passesFilters = (i: Invite, me: User) =>
+  (filters.sport === 'all' || i.sportId === filters.sport) && passesTime(i, me.settings.weekStart) && (filters.gear === 'any' || i.gear.available)
+  && withinDistance(me, i.location, distanceOf(me), me.settings.units);
 
 export function render(args: string[]): HTMLElement {
   const me = currentUser()!;
@@ -48,11 +54,14 @@ export function render(args: string[]): HTMLElement {
   const wanted = selectedInvite ? getInvite(selectedInvite) : undefined;
   if (wanted) {
     selectedGroup = groupKey(wanted);
-    if (!passesFilters(wanted)) { filters.sport = 'all'; filters.time = 'any'; filters.gear = 'any'; }
+    if (!passesFilters(wanted, me)) { resetFilters(); if (!passesFilters(wanted, me)) filters.distance = 'any'; }   // still too far: drop the distance limit too
   }
 
+  // Where the map opens (Personalization): where you left it, your own area, or zoomed to fit the invites you can see.
+  const start = me.settings.mapStart;
+  const fitTo = start === 'invites' && !selectedInvite ? [me, ...mapInvites(me.id).filter((i) => passesFilters(i, me)).map((i) => i.location)] : undefined;
   const handle = mapWidget({
-    key: 'main', user: me, zoom: 13, remember: true, pins: [],
+    key: 'main', user: me, zoom: 13, remember: start === 'last', fitTo: fitTo && fitTo.length > 1 ? fitTo : undefined, maxZoom: 15, pins: [],
     onSelect: (key) => {
       const g = groups.find((x) => x.key === key);
       if (!g) return;
@@ -83,9 +92,14 @@ export function render(args: string[]): HTMLElement {
   }
   applyOpen();
 
-  function filterSelect(label: string, key: 'sport' | 'time' | 'gear', opts: [string, string][]): HTMLElement {
-    return h('select', { class: 'select', value: filters[key], 'aria-label': label, dataset: { key: `f-${key}` },
-      onChange: (e: Event) => { filters[key] = (e.target as HTMLSelectElement).value; selectedInvite = null; selectedGroup = null; promoted = null; update(); } },
+  function filterSelect(label: string, key: 'sport' | 'time' | 'gear' | 'distance', opts: [string, string][]): HTMLElement {
+    const value = key === 'distance' ? distanceOf(me) : filters[key];
+    return h('select', { class: 'select', value, 'aria-label': label, dataset: { key: `f-${key}` },
+      onChange: (e: Event) => {
+        const v = (e.target as HTMLSelectElement).value;
+        if (key === 'distance') filters.distance = v === me.settings.maxDistance ? null : v as MaxDistance; else filters[key] = v;
+        selectedInvite = null; selectedGroup = null; promoted = null; update();
+      } },
       opts.map(([v, l]) => h('option', { value: v }, l)));
   }
   function clearSelection(): void { selectedInvite = null; selectedGroup = null; promoted = null; update(); }
@@ -125,13 +139,13 @@ export function render(args: string[]): HTMLElement {
   };
 
   function update(o: { scrollList?: boolean; anchor?: string } = {}): void {
-    const list = mapInvites(me.id).filter(passesFilters);
+    const list = mapInvites(me.id).filter((i) => passesFilters(i, me));
     groups = groupInvites(list);
     if (selectedInvite && !list.some((i) => i.id === selectedInvite)) selectedInvite = null;
     if (selectedGroup && !groups.some((g) => g.key === selectedGroup)) { selectedGroup = null; selectedInvite = null; }
     if (promoted && !groups.some((g) => g.key === promoted)) promoted = null;
     handle.setPins(groupPins(groups, me), selectedGroup);
-    const active = filters.sport !== 'all' || filters.time !== 'any' || filters.gear !== 'any';
+    const active = filters.sport !== 'all' || filters.time !== 'any' || filters.gear !== 'any' || filters.distance !== null;
 
     // Cards: invites at the selected pin come first, under a heading.
     const group = groups.find((g) => g.key === promoted && g.invites.length > 1);
@@ -145,15 +159,16 @@ export function render(args: string[]): HTMLElement {
       append(filtersEl, [
         h('span', { class: 'select-help' }, filterSelect('Sport', 'sport', [['all', 'All sports'], ...sports.map((s): [string, string] => [s.id, s.name])]),
           filters.sport !== 'all' ? iconButton('help', `About ${getSport(filters.sport)!.name}`, () => openSportInfo(filters.sport), 'icon-btn--on-map') : null),
-        filterSelect('Time', 'time', [['any', 'Any time'], ['today', 'Today'], ['tomorrow', 'Tomorrow'], ['week', 'Next 7 days']]),
+        filterSelect('Time', 'time', [['any', 'Any time'], ['today', 'Today'], ['tomorrow', 'Tomorrow'], ['thisweek', 'This week'], ['week', 'Next 7 days']]),
+        filterSelect('Distance', 'distance', (['any', ...Object.keys(DISTANCES.km)] as MaxDistance[]).map((d): [string, string] => [d, distanceLabel(d, me.settings.units)])),
         filterSelect('Gear', 'gear', [['any', 'Gear: any'], ['shared', 'Gear shared']]),
-        active ? h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => { filters.sport = 'all'; filters.time = 'any'; filters.gear = 'any'; clearSelection(); } }, 'Clear filters') : null]);
+        active ? h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => { resetFilters(); clearSelection(); } }, 'Clear filters') : null]);
       sideEl.replaceChildren();
       append(sideEl, ordered.length ? [
         group ? h('div', { class: 'card card--tight map-group-head' }, h('strong', {}, `${group.invites.length} invites at ${group.label}`),
           h('button', { class: 'btn btn--text btn--sm', type: 'button', onClick: clearSelection }, 'Show all')) : null,
         ...ordered.map((i) => inviteCard(i, me, { selected: isSelected(i), onOpen: () => openInvite(i.id), onShowMap: () => showOnMap(i), onAbout: () => openSportInfo(i.sportId) })),
-      ] : [h('div', { class: 'card empty' }, h('h3', {}, 'No invites match'), h('p', {}, 'Try another sport or time, or start the game yourself.'),
+      ] : [h('div', { class: 'card empty' }, h('h3', {}, 'No invites match'), h('p', {}, 'Try another sport, time or distance, or start the game yourself.'),
             h('a', { class: 'btn btn--primary', href: '#/create' }, 'Create an invite'))]);
       sideEl.scrollTop = scrollTop;
       if (anchorAt !== null) { const now = cardOffset(o.anchor!); if (now !== null) sideEl.scrollTop += now - anchorAt; }

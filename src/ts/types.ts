@@ -12,9 +12,18 @@ export interface SportSkill { sportId: string; skill: Skill }
 /** Fake calendar: a recurring weekly busy block (day 0 = Sunday). */
 export interface BusyBlock { day: number; startHour: number; endHour: number; label: string }
 
+export type MaxDistance = 'any' | 'near' | 'mid' | 'far';
+/** sportId null = your first sport. durationMin = how long the meetup runs. */
+export interface InviteDefaults { sportId: string | null; capacity: number; durationMin: number; vibe: Vibe; visibility: Visibility }
+
 export interface Settings {
-  theme: 'light' | 'dark';
+  theme: 'system' | 'light' | 'dark';   // system = follow the device setting
   units: 'km' | 'mi';
+  maxDistance: MaxDistance;             // how far away Home suggestions and the Map list reach
+  mapStart: 'last' | 'home' | 'invites'; // where the Map tab opens: where you left it, your area, or fitted to the invites
+  timeFormat: '12h' | '24h';
+  weekStart: 0 | 1;                     // 0 = Sunday, 1 = Monday
+  inviteDefaults: InviteDefaults;       // what the Create form starts with
   notify: { joins: boolean; leaves: boolean; friends: boolean; messages: boolean; friendInvites: boolean };
 }
 
@@ -120,4 +129,4 @@ export type Result = { ok: true; id?: string } | { ok: false; error: string; con
 
 export type NewInviteInput = Omit<Invite, 'id' | 'hostId' | 'memberIds'>;
 export type TagEdit = Partial<Pick<Invite, 'skills' | 'vibe' | 'visibility'>>;
-export type SettingsPatch = Partial<Omit<Settings, 'notify'>> & { notify?: Partial<Settings['notify']> };
+export type SettingsPatch = Partial<Omit<Settings, 'notify' | 'inviteDefaults'>> & { notify?: Partial<Settings['notify']>; inviteDefaults?: Partial<InviteDefaults> };

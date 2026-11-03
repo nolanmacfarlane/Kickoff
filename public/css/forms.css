@@ -74,3 +74,18 @@ legend { padding: 0; font-weight: 600; font-size: var(--text-sm); margin-bottom:
 .conflict-slot:empty { display: none; }
 .field-warning { display: flex; align-items: flex-start; gap: var(--s-2); padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--warn-soft); color: var(--warn); font-size: var(--text-sm); font-weight: 500; }
 .field-warning .icon { margin-top: 1px; }
+
+/* Unsaved-changes bar (Your profile, Personalization). Sticks to the bottom of the screen while there are changes. */
+.editor { display: grid; gap: var(--s-4); }
+.save-bar {
+  position: sticky; bottom: calc(var(--s-4) + env(safe-area-inset-bottom, 0px)); z-index: 15;
+  display: grid; gap: var(--s-2); padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4);
+  background: var(--surface); border: 1px solid var(--primary); border-radius: var(--r-lg); box-shadow: var(--shadow-pop);
+}
+.save-bar--enter { animation: save-bar-in .18s ease-out; }
+.save-bar__row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3); }
+.save-bar__msg { display: flex; align-items: center; gap: var(--s-2); margin: 0; font-weight: 600; }
+.save-bar__dot, .unsaved-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+.save-bar__actions { display: flex; gap: var(--s-2); margin-left: auto; }
+.save-bar__error { margin: 0; color: var(--bad); font-size: var(--text-sm); }
+@keyframes save-bar-in { from { opacity: 0; transform: translateY(12px); } }

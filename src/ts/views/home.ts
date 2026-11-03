@@ -4,7 +4,7 @@ import { inviteCard } from '../components/inviteCard';
 import { mapWidget } from '../components/mapWidget';
 import { groupInvites, groupPins } from '../components/pinGroups';
 import { firstName, fmtAgo, go, h } from '../dom';
-import { distanceKm } from '../geo';
+import { distanceKm, withinDistance } from '../geo';
 import { recommend } from '../match';
 import { activityFor, currentUser, mapInvites } from '../state';
 import { openInvite } from './inviteDetail';
@@ -16,7 +16,7 @@ export function render(): HTMLElement {
   const part = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
   const all = recommend(me, 20);
   const recs = all.slice(0, 3);
-  const nearby = mapInvites(me.id);
+  const nearby = mapInvites(me.id).filter((i) => withinDistance(me, i.location, me.settings.maxDistance, me.settings.units));
   const closest = [...nearby].sort((a, b) => distanceKm(me, a.location) - distanceKm(me, b.location)).slice(0, 3);
   const activity = activityFor(me.id).slice(0, 5);
 

@@ -1,5 +1,6 @@
 // Recommendation scoring. Inputs: sport, skill level and schedule (plus friends, vibe, gear, area).
 // Every score comes with the matching keys, so the UI can highlight the tags that match the user's profile.
+import { withinDistance } from './geo';
 import { getSport, getVenue, mapInvites } from './state';
 import type { BusyBlock, Invite, Skill, User } from './types';
 
@@ -52,10 +53,10 @@ export function matchInvite(inv: Invite, user: User): MatchResult {
 
 export interface Recommendation { invite: Invite; match: MatchResult }
 
-/** Upcoming, visible, joinable invites that fit the user, best first. */
+/** Upcoming, visible, joinable invites that fit the user and are within their distance setting, best first. */
 export function recommend(user: User, limit = 6): Recommendation[] {
   return mapInvites(user.id)
-    .filter((i) => !i.memberIds.includes(user.id))
+    .filter((i) => !i.memberIds.includes(user.id) && withinDistance(user, i.location, user.settings.maxDistance, user.settings.units))
     .map((invite) => ({ invite, match: matchInvite(invite, user) }))
     .filter((r) => r.match.score > 0)
     .sort((a, b) => b.match.score - a.match.score || a.invite.start - b.invite.start)

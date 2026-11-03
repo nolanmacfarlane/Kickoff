@@ -218,7 +218,7 @@ export function updateProfile(patch: Partial<Omit<User, 'id' | 'friendIds' | 'se
 export function updateSettings(patch: SettingsPatch): Result {
   const me = currentUser();
   if (!me) return fail('Not signed in.');
-  me.settings = { ...me.settings, ...patch, notify: { ...me.settings.notify, ...patch.notify } };
+  me.settings = { ...me.settings, ...patch, notify: { ...me.settings.notify, ...patch.notify }, inviteDefaults: { ...me.settings.inviteDefaults, ...patch.inviteDefaults } };
   emit();
   return ok();
 }

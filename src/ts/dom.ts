@@ -42,7 +42,13 @@ export function keepFocus(fn: () => void): void {
 }
 
 // ---------- formatting ----------
-const timeFmt = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
+const makeTimeFmt = (h24: boolean) => new Intl.DateTimeFormat('en-US', h24 ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' } : { hour: 'numeric', minute: '2-digit' });
+let timeFmt = makeTimeFmt(false);
+let use24h = false;
+/** Follows the signed-in user's 12h / 24h setting. Called before every render. */
+export function setTimeFormat(f: '12h' | '24h'): void { if ((f === '24h') !== use24h) { use24h = f === '24h'; timeFmt = makeTimeFmt(use24h); } }
+/** A whole hour for compact labels: "3 pm" or "15:00". */
+export const fmtHour = (n: number): string => (use24h ? `${String(n).padStart(2, '0')}:00` : n === 0 ? '12 am' : n === 12 ? '12 pm' : n > 12 ? `${n - 12} pm` : `${n} am`);
 const dayFmt = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 

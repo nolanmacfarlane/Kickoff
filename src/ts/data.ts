@@ -23,7 +23,11 @@ export function geocode(address: string): { area: string; lat: number; lng: numb
   return { area, lat: c.lat + ((hash % 100) / 100 - 0.5) * 0.006, lng: c.lng + ((Math.floor(hash / 100) % 100) / 100 - 0.5) * 0.006 };
 }
 
-export const defaultSettings = (): Settings => ({ theme: 'light', units: 'km', notify: { joins: true, leaves: true, friends: true, messages: true, friendInvites: true } });
+export const defaultSettings = (): Settings => ({
+  theme: 'system', units: 'km', maxDistance: 'any', mapStart: 'last', timeFormat: '12h', weekStart: 1,
+  inviteDefaults: { sportId: null, capacity: 4, durationMin: 90, vibe: 'Casual', visibility: 'open' },
+  notify: { joins: true, leaves: true, friends: true, messages: true, friendInvites: true },
+});
 
 export const venues: Venue[] = [
   { id: 'v-boulder', name: 'Boulder House', kind: 'gym', area: 'Downtown', lat: 48.4310, lng: -123.3660, hours: 'Daily 10am-10pm', sportIds: ['bouldering'],
