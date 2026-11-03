@@ -1,5 +1,5 @@
 /* Home: greeting, recommended invites, mini map, recent activity.
-   Class vocabulary: .greeting .rec-list .rec-card .mini-map .mini-map__link .activity-list */
+   Class vocabulary: .greeting .rec-list .rec-card .mini-map .mini-map__link .activity-list .activity-export */
 .greeting h1 { font-size: var(--text-3xl); }
 .greeting p { margin-top: var(--s-2); color: var(--ink-2); font-size: var(--text-lg); }
 .greeting { margin-bottom: var(--s-6); }
@@ -15,6 +15,7 @@
 .activity-list li { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) 0; border-bottom: 1px solid var(--line); font-size: var(--text-sm); }
 .activity-list li:last-child { border-bottom: 0; }
 .activity-list time { color: var(--ink-3); white-space: nowrap; }
+.activity-export { margin-top: var(--s-3); }
 
 .mini-map { position: relative; height: 300px; border: 1px solid var(--line-strong); border-radius: var(--r-xl); overflow: hidden; }
 .mini-map .map { height: 100%; }

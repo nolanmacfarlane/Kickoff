@@ -6,6 +6,7 @@ import {
 import { seg } from '../components/seg';
 import { avatar, confirmDialog, fmtAgo, go, h, keepFocus, toast } from '../dom';
 import { setGuard } from '../nav';
+import type { ActivityItem } from '../types';
 import { activityFor, currentUser, logout, myPast, myUpcoming, updateProfile, updateSettings } from '../state';
 import { openInvite } from './inviteDetail';
 import { openSportInfo } from './sportInfo';
@@ -86,6 +87,26 @@ function help(): HTMLElement {
     h('div', {}, h('button', { class: 'btn btn--secondary', type: 'button' }, 'Contact support')));   // intentionally does nothing
 }
 
+// Downloads the user's activity log as a Markdown file, newest entry first (same order as on screen).
+function exportHistory(name: string, log: ActivityItem[]): void {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const stamp = (ts: number) => { const d = new Date(ts); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const md = [
+    `# Kickoff activity history: ${name}`, '',
+    `Exported ${stamp(Date.now())} · ${log.length} entr${log.length === 1 ? 'y' : 'ies'}`, '',
+    '| When | Activity |', '| --- | --- |',
+    ...log.map((a) => `| ${stamp(a.at)} | ${a.text.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')} |`), '',
+  ].join('\n');
+  const url = URL.createObjectURL(new Blob([md], { type: 'text/markdown;charset=utf-8' }));
+  const today = new Date();
+  const link = h('a', { href: url, download: `kickoff-history-${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}.md` });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  toast('History exported.');
+}
+
 export function render(args: string[]): HTMLElement {
   const me = currentUser()!;
   const section = SECTIONS.some(([id]) => id === args[0]) ? args[0] : 'profile';
@@ -100,7 +121,8 @@ export function render(args: string[]): HTMLElement {
     content = h('div', { class: 'stack' },
       h('section', {}, h('h2', {}, 'Upcoming'), up.length ? h('div', { class: 'rec-list' }, up.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'Nothing planned.')),
       h('section', {}, h('h2', {}, 'Past meetups'), past.length ? h('div', { class: 'rec-list' }, past.map((i) => inviteCard(i, me, { onOpen: () => openInvite(i.id), onAbout: () => openSportInfo(i.sportId) }))) : h('div', { class: 'empty empty--tight' }, 'No past meetups yet.')),
-      h('section', {}, h('h2', {}, 'History'), log.length ? h('ul', { class: 'card activity-list' }, log.map((a) => h('li', {}, h('span', {}, a.text), h('time', {}, fmtAgo(a.at))))) : h('div', { class: 'empty empty--tight' }, 'No activity yet.')));
+      h('section', {}, h('h2', {}, 'History'), log.length ? h('ul', { class: 'card activity-list' }, log.map((a) => h('li', {}, h('span', {}, a.text), h('time', {}, fmtAgo(a.at))))) : h('div', { class: 'empty empty--tight' }, 'No activity yet.'),
+        log.length ? h('div', { class: 'activity-export' }, h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => exportHistory(me.name, log) }, 'Export history')) : null));
   } else content = h('div', { class: 'card stack' }, h('h2', {}, 'About us'), h('p', {}, 'Kickoff helps people play sports together on short notice, or plan ahead. This is a course prototype with made-up data.'),
     h('p', { class: 'muted' }, 'Sport icons by Phosphor Icons (MIT licence). Map data from OpenStreetMap contributors, map tiles by CARTO, map library Leaflet.'));
 
