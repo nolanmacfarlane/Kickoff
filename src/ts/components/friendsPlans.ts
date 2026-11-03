@@ -1,7 +1,7 @@
-// "Friends' plans": upcoming invites your friends are going to. Used on Home (a few) and Social (all).
+// "Friends' plans": upcoming invites your friends are going to. Used on Home (a few), the Social overview (a few) and the Friends' plans tab (filtered).
 import { avatar, fmtWhen, h, iconButton } from '../dom';
 import { friendsPlans } from '../state';
-import type { User } from '../types';
+import type { Invite, User } from '../types';
 import { sportLabel } from './sportBits';
 
 const who = (friends: User[]): string =>
@@ -9,8 +9,10 @@ const who = (friends: User[]): string =>
   : friends.length === 2 ? `${friends[0].name} and ${friends[1].name} are going`
   : `${friends[0].name}, ${friends[1].name} and ${friends.length - 2} more are going`;
 
-export function friendsPlansList(me: User, limit: number | null, onOpen: (inviteId: string) => void, onAbout: (sportId: string) => void): HTMLElement {
-  const plans = friendsPlans(me.id).slice(0, limit ?? undefined);
+/** `all` lets the caller pass an already filtered list (the Friends' plans tab); it defaults to every plan. */
+export function friendsPlansList(me: User, limit: number | null, onOpen: (inviteId: string) => void, onAbout: (sportId: string) => void,
+  all: { invite: Invite; friends: User[] }[] = friendsPlans(me.id)): HTMLElement {
+  const plans = all.slice(0, limit ?? undefined);
   if (!plans.length) return h('div', { class: 'empty empty--tight' }, me.friendIds.length ? 'None of your friends have joined an upcoming game yet.' : 'Add friends to see what they are going to.');
   return h('ul', { class: 'friend-plans' }, plans.map(({ invite, friends }) =>
     h('li', { class: 'card card--tight friend-plan' },

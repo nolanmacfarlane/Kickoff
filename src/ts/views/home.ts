@@ -42,7 +42,7 @@ export function render(): HTMLElement {
           h('div', { class: 'section-head' }, h('h2', { id: 'near-h' }, 'Invites nearby')),
           h('div', { class: 'mini-map' }, mini.el, h('a', { class: 'mini-map__link', href: '#/map', 'aria-label': 'Open the map of nearby invites' }))),
         h('section', { 'aria-labelledby': 'fp-h' },
-          h('div', { class: 'section-head' }, h('h2', { id: 'fp-h' }, "Friends' plans"), h('a', { href: '#/social' }, 'See all')),
+          h('div', { class: 'section-head' }, h('h2', { id: 'fp-h' }, "Friends' plans"), h('a', { href: '#/social/plans' }, 'See all')),
           friendsPlansList(me, 3, openInvite, openSportInfo)),
         h('section', { 'aria-labelledby': 'act-h' },
           h('div', { class: 'section-head' }, h('h2', { id: 'act-h' }, 'Recent activity')),

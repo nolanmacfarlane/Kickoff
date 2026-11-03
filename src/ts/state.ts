@@ -166,6 +166,27 @@ export function declineFriendRequest(requestId: string): Result {
   return ok();
 }
 
+/** Unfriend, both ways. The other person is not told. Your direct chat is deleted for both of you. */
+export function removeFriend(otherId: string): Result {
+  const me = currentUser();
+  const other = getUser(otherId);
+  if (!me || !other || !me.friendIds.includes(otherId)) return fail('You are not friends with this person.');
+  me.friendIds = me.friendIds.filter((id) => id !== otherId);
+  other.friendIds = other.friendIds.filter((id) => id !== me.id);
+  const chat = directChatId(me.id, otherId);
+  st.messages = st.messages.filter((m) => m.chatId !== chat);
+  for (const id of [me.id, otherId]) if (st.chatReads[id]) delete st.chatReads[id][chat];
+  log(me.id, `You removed ${other.name} as a friend`);
+  emit();
+  return ok();
+}
+
+/** When you last played with someone (start of the most recent past meetup you were both in), or null. */
+export function lastPlayedWith(userId: string, otherId: string, now = Date.now()): number | null {
+  const shared = st.invites.filter((i) => isPast(i, now) && i.memberIds.includes(userId) && i.memberIds.includes(otherId));
+  return shared.length ? Math.max(...shared.map((i) => i.start)) : null;
+}
+
 // ---------- auth / profile / settings ----------
 
 export function loginDemo(): void { st.currentUserId = 'u-demo'; emit(); }

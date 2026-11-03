@@ -136,5 +136,18 @@ const unreadBefore = S.unreadCount(demo);
 S.markKindRead('friend');
 check('friend-request notifications are cleared by opening Social, meetup ones are not', S.unreadCount(demo) === unreadBefore - 1 && S.unreadCount(demo, 'i-11') === 2);
 
+// ---- removing a friend ----
+S.initState(); S.loginDemo();
+check('last played with Maya is the past Soccer meetup', S.lastPlayedWith(demo, 'u-maya') === S.getInvite('i-12')!.start);
+check('never played with Tom', S.lastPlayedWith(demo, 'u-tom') === null);
+const mayaChat = S.directChatId(demo, 'u-maya');
+check('remove friend works', S.removeFriend('u-maya').ok);
+check('removed both ways', !S.getUser(demo)!.friendIds.includes('u-maya') && !S.getUser('u-maya')!.friendIds.includes(demo));
+check('direct chat is deleted and gone from the list', S.messagesIn(mayaChat).length === 0 && !S.chatSummaries(demo).some((c) => c.id === mayaChat));
+check("their plans leave Friends' plans", S.friendsPlans(demo).every((p) => !p.friends.some((f) => f.id === 'u-maya')));
+check('the removed friend is not notified', !S.notificationsFor('u-maya').some((n) => n.text.includes('remove')));
+check('cannot remove someone who is not a friend', !S.removeFriend('u-maya').ok);
+check('can send a new request later', S.canRequestFriend('u-maya'));
+
 console.log(failed === 0 ? '\nAll rules pass.' : `\n${failed} failing.`);
 if (failed) throw new Error(`${failed} rule check(s) failed`);
