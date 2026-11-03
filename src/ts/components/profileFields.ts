@@ -1,5 +1,5 @@
 // Profile inputs shared by onboarding and the Profile tab. They edit a draft object, then call redraw().
-import { freeTimeOptions, geocode, motivationOptions, sampleCalendar, SKILLS, sportMatches, sports } from '../data';
+import { freeTimeOptions, geocode, motivationOptions, sampleCalendar, SKILLS, sportCategories, sportMatches, sports } from '../data';
 import { append, fmtHour, h, iconButton } from '../dom';
 import type { BusyBlock, FreeTime, Motivation, Skill, Sport, User } from '../types';
 import { segMulti, toggleBox } from './seg';
@@ -59,8 +59,9 @@ let comboId = 0;
  * Add, then one dropdown. Search for a sport (by name or another name people use, like "biking") in a type-ahead box: matches float directly under the box (they do
  * not push the page around, like LinkedIn's skill search). Choose one to add it to "Your sports", where a level
  * dropdown (Want to try, or a skill level) and an x button live. Nothing is listed until you type.
+ * With categories (onboarding), "Not sure?" cards add a whole group of sports as Want to try.
  */
-export function sportsField(d: ProfileDraft, redraw: () => void, onAbout: (sportId: string) => void): HTMLElement {
+export function sportsField(d: ProfileDraft, redraw: () => void, onAbout: (sportId: string) => void, opts: { categories?: boolean } = {}): HTMLElement {
   const listId = `sport-results-${++comboId}`;
   const info = (s: Sport) => h('div', { class: 'sport-row__name' }, sportLabel(s.id, { as: 'strong', onAbout: () => onAbout(s.id) }), h('small', {}, s.tagline));
 
@@ -130,9 +131,26 @@ export function sportsField(d: ProfileDraft, redraw: () => void, onAbout: (sport
   }
   fillResults(); close();
 
+  // On when all its sports are added. Turning one off removes only its sports still at Want to try, so levels people chose are kept.
+  const categories = opts.categories ? h('fieldset', { class: 'stack-sm' }, h('legend', {}, 'Not sure? Pick a type and we will add some sports to try.'),
+    h('div', { class: 'choice-grid' }, sportCategories.map((c) => {
+      const on = c.sportIds.every((id) => id in d.sports);
+      return h('button', {
+        type: 'button', class: 'choice', 'aria-pressed': on, dataset: { key: `cat-${c.id}` },
+        onClick: () => {
+          for (const id of c.sportIds) {
+            if (!on && !(id in d.sports)) d.sports[id] = 'try';
+            else if (on && d.sports[id] === 'try') delete d.sports[id];
+          }
+          redraw();
+        },
+      }, toggleBox(), h('span', { class: 'choice__text' }, h('strong', {}, c.label), h('small', {}, c.hint)));
+    }))) : null;
+
   const added = sports.filter((s) => s.id in d.sports);
   return h('div', { class: 'stack' },
     h('div', { class: 'stack-sm' }, h('h3', {}, 'Add a sport'), h('div', { class: 'search-field' }, uiIcon('search'), input, popup)),
+    categories,
     h('div', { class: added.length ? '' : 'stack-sm' }, h('h3', {}, 'Your sports'),
       added.length ? h('ul', { class: 'sport-list' }, added.map((s) => h('li', { class: 'sport-row' }, info(s), controls(s))))
         : h('div', { class: 'empty empty--tight' }, 'No sports yet. Search above to add one.')));

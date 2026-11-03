@@ -23,6 +23,10 @@
 .friend-list { display: grid; gap: var(--s-2); }
 .friend-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
 .friend-row .grow { min-width: 10rem; }
+/* onboarding suggestions: name, place, sports in common stacked; the button never wraps below */
+.friend-row:has(.friend-row__info) { flex-wrap: nowrap; }
+.friend-row__info { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.friend-row .btn { flex: none; white-space: nowrap; }
 
 /* Profile */
 /* The header is pinned to the avatar's height so the content column can start level with the menu. */

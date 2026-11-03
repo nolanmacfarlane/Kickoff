@@ -20,12 +20,12 @@ export function render(): HTMLElement {
   const LAST = 4;
   const suggestions = () => suggestFriends(draftToProfile(d), maxDistance, UNITS);
 
-  const titles = [
+  const titles: [string, string, boolean?][] = [   // [heading, lede, optional]
     ['Welcome to Kickoff', 'Tell us a little about you and we will suggest games that fit. It takes about a minute.'],
     ['Why you play', 'We use this to suggest games with the right vibe.'],
     ['Your sports', 'Search for a sport and add it, then choose your level, or mark it as one you want to try.'],
-    ['Add your schedule', 'Optional. Connect a calendar, or tell us when you are usually free, so suggestions fit your week.'],
-    ['Find people to play with', 'Optional. These people play your sports near you. Add a few and see the games they are going to.'],
+    ['Add your schedule', 'Connect a calendar, or tell us when you are usually free, so suggestions fit your week.', true],
+    ['Find people to play with', 'These people play your sports near you. Add a few and see the games they are going to.', true],
   ];
 
   const distanceField = () => h('div', { class: 'field' }, h('span', { class: 'field__label' }, 'How far will you travel for a game?'),
@@ -36,10 +36,11 @@ export function render(): HTMLElement {
   function friendsField(): HTMLElement {
     const list = suggestions();
     if (!list.length) return h('div', { class: 'empty empty--tight' }, 'No one matches yet. You can add friends later from people you meet at games.');
-    return h('ul', { class: 'friend-list' }, list.map(({ user: u, reasons }) => {
+    return h('ul', { class: 'friend-list' }, list.map(({ user: u, place, shared }) => {
       const on = picked.has(u.id);
       return h('li', { class: 'friend-row' }, avatar(u),
-        h('div', { class: 'grow' }, h('strong', {}, u.name), h('p', { class: 'card__meta' }, reasons.slice(0, 2).join(' · '))),
+        h('div', { class: 'friend-row__info' }, h('strong', {}, u.name), h('p', { class: 'card__meta' }, place),
+          shared.length ? h('p', { class: 'card__meta' }, `In common: ${shared.join(', ')}`) : null),
         // same labels and look as Invite details. Requests are only sent on Finish, so "Requested" can still be tapped to undo.
         h('button', { class: `btn btn--secondary btn--sm${on ? ' btn--requested' : ''}`, type: 'button', 'aria-pressed': on, dataset: { key: `friend-${u.id}` },
           'aria-label': on ? `Cancel friend request to ${u.name}` : `Add ${u.name} as a friend`, title: on ? 'Tap to cancel' : undefined,
@@ -51,7 +52,7 @@ export function render(): HTMLElement {
   function body(): HTMLElement {
     if (step === 0) return h('div', { class: 'stack' }, identityFields(d), distanceField());
     if (step === 1) return motivationField(d, draw);
-    if (step === 2) return sportsField(d, draw, openSportInfo);
+    if (step === 2) return sportsField(d, draw, openSportInfo, { categories: true });
     if (step === 3) return calendarField(d, draw);
     return friendsField();
   }
@@ -66,6 +67,7 @@ export function render(): HTMLElement {
       if (error) { dir = null; return draw(); }
     }
     if (step === 1 && d.motivations.length === 0) { error = 'Pick at least one thing you are looking for.'; dir = null; return draw(); }
+    if (step === 2 && Object.keys(d.sports).length === 0) { error = 'Add at least one sport to continue.'; dir = null; return draw(); }
     if (step === 2 && pendingSports(d).length) { error = `Choose a level for ${pendingSports(d).join(', ')}, or remove it.`; dir = null; return draw(); }
     if (step < LAST) return go_(step + 1);
     const res = completeOnboarding(draftToProfile(d), { maxDistance });
@@ -83,7 +85,7 @@ export function render(): HTMLElement {
       h('div', { class: 'card onboarding__card' },
         h('div', { class: 'stepper', role: 'progressbar', 'aria-valuemin': 1, 'aria-valuemax': LAST + 1, 'aria-valuenow': step + 1, 'aria-label': `Step ${step + 1} of ${LAST + 1}` },
           titles.map((_, i) => h('span', { class: 'stepper__step', dataset: { state: i < step ? 'done' : i === step ? 'current' : 'todo' } }))),
-        h('div', { class: `onboarding__step ${slide}`.trim() }, h('h1', {}, titles[step][0]), h('p', { class: 'onboarding__lede' }, titles[step][1]), body()),
+        h('div', { class: `onboarding__step ${slide}`.trim() }, h('h1', { class: 'onboarding__title' }, titles[step][0], titles[step][2] ? h('span', { class: 'tag tag--optional' }, 'Optional') : null), h('p', { class: 'onboarding__lede' }, titles[step][1]), body()),
         error ? h('p', { class: 'notice notice--error', role: 'alert' }, error) : null,   // below the fields, above the buttons
         h('div', { class: 'onboarding__actions' },
           step > 0 ? h('button', { class: 'btn btn--secondary', type: 'button', onClick: () => go_(step - 1) }, 'Back') : h('span'),

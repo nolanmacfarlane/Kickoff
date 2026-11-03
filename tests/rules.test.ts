@@ -2,6 +2,7 @@
 import * as S from '../src/ts/state';
 import { distanceKm, maxDistanceKm } from '../src/ts/geo';
 import { inFreeTime, matchInvite, recommend } from '../src/ts/match';
+import { sportCategories, sports } from '../src/ts/data';
 
 let failed = 0;
 function check(name: string, cond: boolean) { console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}`); if (!cond) failed++; }
@@ -185,6 +186,11 @@ check('weekday slot does not match a weekend game', !inFreeTime(inv, ['weekday-m
 const u = { ...S.currentUser()!, calendar: null, freeTimes: ['weekend-morning' as const] };
 check('free times add the schedule match when no calendar', matchInvite(inv, u).keys.has('schedule'));
 check('calendar wins over free times', !matchInvite(inv, { ...u, calendar: [{ day: 6, startHour: 9, endHour: 12, label: 'Work' }] }).keys.has('schedule'));
+
+// ---- onboarding sport categories ----
+const catIds = sportCategories.flatMap((c) => c.sportIds);
+check('sport categories only list real sports', catIds.every((id) => sports.some((s) => s.id === id)));
+check('sport categories cover every sport', sports.every((s) => catIds.includes(s.id)));
 
 console.log(failed === 0 ? '\nAll rules pass.' : `\n${failed} failing.`);
 if (failed) throw new Error(`${failed} rule check(s) failed`);

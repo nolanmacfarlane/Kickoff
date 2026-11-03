@@ -2,6 +2,8 @@
 .onboarding { max-width: 680px; margin: var(--s-5) auto 0; }
 .onboarding__card { padding: var(--s-6); border-radius: var(--r-xl); }
 .onboarding h1 { margin-bottom: var(--s-2); }
+.onboarding__title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); }
+.tag--optional { background: var(--primary-soft); border-color: var(--primary-soft); color: var(--primary-hover); }
 .onboarding__lede { color: var(--ink-2); margin-bottom: var(--s-5); }
 
 .stepper { display: flex; gap: var(--s-2); margin-bottom: var(--s-5); }

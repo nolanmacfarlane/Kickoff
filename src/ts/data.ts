@@ -115,7 +115,18 @@ export const sports: Sport[] = [
       { item: 'Protective gear', required: false, note: 'Needed for hard-ball matches' }] },
 ];
 
-export const motivationOptions: { id: Motivation; label: string; hint: string }[] = [
+/** Onboarding "Not sure?" picks: choosing one adds its sports as "Want to try". Together they cover every sport. */
+export const sportCategories: { id: string; label: string; hint: string; sportIds: string[] }[] = [
+  { id: 'team', label: 'Team games', hint: 'Soccer, basketball and more', sportIds: ['soccer', 'basketball', 'volleyball', 'baseball', 'cricket'] },
+  { id: 'racquet', label: 'Racquet sports', hint: 'Tennis and badminton', sportIds: ['tennis', 'badminton'] },
+  { id: 'outdoors', label: 'Outdoors', hint: 'Hiking, cycling, running', sportIds: ['hiking', 'cycling', 'running'] },
+  { id: 'easygoing', label: 'Easygoing', hint: 'Yoga, golf, swimming', sportIds: ['yoga', 'golf', 'swimming'] },
+  // the only required gear (if any) is shoes; everything else is optional or the host brings it
+  { id: 'minimal-gear', label: 'Minimal gear', hint: 'Just bring shoes', sportIds: ['running', 'hiking', 'soccer', 'basketball', 'volleyball', 'cricket'] },
+  { id: 'different', label: 'Something different', hint: 'Bouldering and fencing', sportIds: ['bouldering', 'fencing'] },
+];
+
+export const motivationOptions:{ id: Motivation; label: string; hint: string }[] = [
   { id: 'exercise', label: 'Exercise', hint: 'Stay active' },
   { id: 'challenge', label: 'Challenge', hint: 'Push myself' },
   { id: 'competition', label: 'Competition', hint: 'Play to win' },

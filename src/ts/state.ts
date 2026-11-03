@@ -134,7 +134,8 @@ export const canRequestFriend = (otherId: string): boolean => {
 
 /** The parts of a profile that friend suggestions look at. Onboarding passes the draft before the user exists. */
 export type FriendProfile = Pick<User, 'area' | 'lat' | 'lng' | 'motivations' | 'currentSports' | 'desiredSports'>;
-export interface FriendSuggestion { user: User; score: number; reasons: string[] }
+/** place: distance and neighbourhood. shared: the sports you have in common, with a short note on each. */
+export interface FriendSuggestion { user: User; score: number; place: string; shared: string[] }
 
 /**
  * "People you may know": others who play your sports (more if at your level), play a sport you want to try,
@@ -147,25 +148,25 @@ export function suggestFriends(p: FriendProfile, maxDistance: MaxDistance, units
     if (u.id === selfId || u.id === 'u-demo' || self?.friendIds.includes(u.id)) continue;
     if (!withinDistance(p, u, maxDistance, units)) continue;
     let score = 0;
-    const reasons: string[] = [];
+    const shared: string[] = [];
     for (const mine of p.currentSports) {
       const theirs = u.currentSports.find((s) => s.sportId === mine.sportId);
       if (!theirs) continue;
       const name = getSport(mine.sportId)!.name;
-      if (theirs.skill === mine.skill) { score += 4; reasons.push(`${name}, ${theirs.skill.toLowerCase()} like you`); }
-      else { score += 3; reasons.push(`Plays ${name.toLowerCase()}`); }
+      if (theirs.skill === mine.skill) { score += 4; shared.push(`${name} (${theirs.skill.toLowerCase()}, like you)`); }
+      else { score += 3; shared.push(name); }
     }
     for (const id of p.desiredSports) {
       const theirs = u.currentSports.find((s) => s.sportId === id);
-      if (theirs) { score += 2; reasons.push(`Plays ${getSport(id)!.name.toLowerCase()}, which you want to try`); }
-      else if (u.desiredSports.includes(id)) { score += 2; reasons.push(`Also wants to try ${getSport(id)!.name.toLowerCase()}`); }
+      if (theirs) { score += 2; shared.push(`${getSport(id)!.name} (you want to try)`); }
+      else if (u.desiredSports.includes(id)) { score += 2; shared.push(`${getSport(id)!.name} (both want to try)`); }
     }
     const sharesSport = score > 0;
-    if (u.area === p.area) { score += 2; reasons.push(`Lives in ${u.area}`); }
-    else reasons.push(`${fmtDistance(distanceKm(p, u), units)} away`);
+    if (u.area === p.area) score += 2;
+    const place = `${fmtDistance(distanceKm(p, u), units)} away · ${u.area}`;
     if (!sharesSport && u.area !== p.area) continue;
     score += u.motivations.filter((m) => p.motivations.includes(m)).length * 0.5;   // tie-breaker only: most people share one
-    out.push({ user: u, score, reasons });
+    out.push({ user: u, score, place, shared });
   }
   return out.sort((a, b) => b.score - a.score || a.user.name.localeCompare(b.user.name)).slice(0, limit);
 }
