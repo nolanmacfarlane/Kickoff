@@ -177,6 +177,10 @@ check('people with no shared sport outside your area are not suggested', sugg.ev
 check('distance limit applies to suggestions', S.suggestFriends(profile, 'near', 'km').every((x) => distanceKm(profile, x.user) <= 2));
 const sam = S.completeOnboarding(profile, { maxDistance: 'mid' });
 check('onboarding saves the distance', sam.ok && S.currentUser()!.settings.maxDistance === 'mid');
+check('names over 40 characters are refused at onboarding', !S.completeOnboarding({ ...profile, name: 'A'.repeat(41) }).ok);
+check('a 40 character name can be saved', S.updateProfile({ name: 'A'.repeat(40) }).ok && S.currentUser()!.name.length === 40);
+check('names over 40 characters are refused on the profile', !S.updateProfile({ name: 'A'.repeat(41) }).ok && S.currentUser()!.name.length === 40);
+check('an empty name is refused on the profile', !S.updateProfile({ name: '  ' }).ok);
 check('can request a suggested person without meeting them', S.sendFriendRequest('u-maya').ok && S.friendStatus('u-maya') === 'requested');
 
 const at = (day: number, hour: number) => { const t = new Date(2026, 10, 1 + ((day - new Date(2026, 10, 1).getDay() + 7) % 7), hour); return t.getTime(); };

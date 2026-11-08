@@ -16,6 +16,12 @@ const fail = (error: string): Result => ({ ok: false, error });
 
 export const MIN_CAPACITY = 2;
 export const MAX_CAPACITY = 30;
+/** Long enough for real full names; the Profile header shrinks and wraps names up to this length so they are never cut off. */
+export const MAX_NAME_LENGTH = 40;
+
+const nameError = (name: string): string | null =>
+  !name.trim() ? 'Please enter your name.'
+    : name.trim().length > MAX_NAME_LENGTH ? `Your name can be up to ${MAX_NAME_LENGTH} characters.` : null;
 
 // ---------- lifecycle ----------
 
@@ -235,7 +241,8 @@ export function logout(): void { st.currentUserId = null; emit(); }
 
 /** settings: what onboarding asked for (distance); the rest are defaults. */
 export function completeOnboarding(profile: Omit<User, 'id' | 'avatarColor' | 'friendIds' | 'settings'>, settings: Partial<Pick<Settings, 'maxDistance'>> = {}): Result {
-  if (!profile.name.trim()) return fail('Please enter your name.');
+  const nameErr = nameError(profile.name);
+  if (nameErr) return fail(nameErr);
   if (!profile.address.trim()) return fail('Please enter your address.');
   if (profile.motivations.length === 0) return fail('Pick at least one thing you are looking for.');
   const id = nid('u');
@@ -252,6 +259,8 @@ export function completeOnboarding(profile: Omit<User, 'id' | 'avatarColor' | 'f
 export function updateProfile(patch: Partial<Omit<User, 'id' | 'friendIds' | 'settings'>>): Result {
   const me = currentUser();
   if (!me) return fail('Not signed in.');
+  const nameErr = patch.name === undefined ? null : nameError(patch.name);
+  if (nameErr) return fail(nameErr);
   Object.assign(me, patch);
   emit();
   return ok();

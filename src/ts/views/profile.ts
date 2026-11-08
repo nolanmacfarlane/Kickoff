@@ -17,6 +17,27 @@ import { openSportInfo } from './sportInfo';
 
 const SECTIONS: [string, string][] = [['profile', 'Your profile'], ['activity', 'Activity'], ['personalization', 'Personalization'], ['help', 'Help'], ['about', 'About us']];
 
+// The name sits beside the avatar in a 156px slot and must fit the 88px header, so longer names get a smaller size and wrap.
+// perLine = characters that fit on one line at that size (measured with the heading font), lines = how many fit in the header.
+const NAME_SIZES = [
+  { cls: '', perLine: 10, lines: 1 },                     // 1.9rem, e.g. "Jordan Lee" (two lines would not fit with the invite count)
+  { cls: 'profile-name--md', perLine: 12, lines: 2 },     // 1.45rem, e.g. "Christopher Johnson"
+  { cls: 'profile-name--sm', perLine: 14, lines: 3 },     // 1.15rem, e.g. "Mohammed Abdulrahman Al-Mubarak"
+];
+
+/** Lines the name wraps to with perLine characters per line, breaking at spaces and after hyphens like the browser does. */
+function nameLines(name: string, perLine: number): number {
+  let lines = 1, used = 0;
+  for (const word of name.trim().split(/\s+|(?<=-)/)) {
+    if (word.length > perLine) return Infinity;                            // would split mid-word, so try a smaller size
+    if (used && used + 1 + word.length > perLine) { lines++; used = word.length; } else used += (used ? 1 : 0) + word.length;
+  }
+  return lines;
+}
+
+/** The largest size the name fits at without breaking a word. Names past every step use 1rem, which fits 40 characters in three lines. */
+const nameSizeClass = (name: string) => (NAME_SIZES.find((s) => nameLines(name, s.perLine) <= s.lines)?.cls ?? 'profile-name--xs');
+
 // The unsaved draft lives here so a re-render does not throw away what the user typed.
 let editing: { userId: string; initial: string; draft: ProfileDraft } | null = null;
 
@@ -208,7 +229,7 @@ export function render(args: string[]): HTMLElement {
 
   return h('div', { class: 'profile-layout' },
     h('aside', { class: 'profile-side' },
-      h('div', { class: 'profile-head' }, avatar(me, 'xl'), h('div', {}, h('h1', { title: me.name }, me.name), h('p', { class: 'muted' }, `${count} invite${count === 1 ? '' : 's'}`))),
+      h('div', { class: 'profile-head' }, avatar(me, 'xl'), h('div', {}, h('h1', { class: `profile-name ${nameSizeClass(me.name)}` }, me.name), h('p', { class: 'muted' }, `${count} invite${count === 1 ? '' : 's'}`))),
       h('nav', { class: 'card menu-list', 'aria-label': 'Profile sections' },
         SECTIONS.map(([id, label]) => h('a', { href: id === 'profile' ? '#/profile' : `#/profile/${id}`, 'aria-current': id === section ? 'page' : null, dataset: { section: id } },
           label, id === 'profile' || id === 'personalization' ? unsavedMark(id === section && !!getGuard()?.isDirty()) : null)),

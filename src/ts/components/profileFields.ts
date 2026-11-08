@@ -1,6 +1,7 @@
 // Profile inputs shared by onboarding and the Profile tab. They edit a draft object, then call redraw().
 import { freeTimeOptions, geocode, motivationOptions, sampleCalendar, SKILLS, sportCategories, sportMatches, sports } from '../data';
 import { append, fmtHour, h, iconButton } from '../dom';
+import { MAX_NAME_LENGTH } from '../state';
 import type { BusyBlock, FreeTime, Motivation, Skill, Sport, User } from '../types';
 import { segMulti, toggleBox } from './seg';
 import { sportIcon, sportLabel, uiIcon } from './sportBits';
@@ -31,7 +32,7 @@ export function draftToProfile(d: ProfileDraft): Omit<User, 'id' | 'avatarColor'
 export function identityFields(d: ProfileDraft): HTMLElement {
   return h('div', { class: 'stack' },
     h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Your name'),
-      h('input', { class: 'input', type: 'text', value: d.name, autocomplete: 'given-name', dataset: { key: 'name' }, onInput: (e: Event) => { d.name = (e.target as HTMLInputElement).value; } })),
+      h('input', { class: 'input', type: 'text', value: d.name, maxlength: MAX_NAME_LENGTH, autocomplete: 'given-name', dataset: { key: 'name' }, onInput: (e: Event) => { d.name = (e.target as HTMLInputElement).value; } })),
     h('label', { class: 'field' }, h('span', { class: 'field__label' }, 'Your address'),
       h('input', { class: 'input', type: 'text', value: d.address, autocomplete: 'street-address', placeholder: 'e.g. 1250 Fairfield Rd, Victoria', dataset: { key: 'address' },
         onInput: (e: Event) => { d.address = (e.target as HTMLInputElement).value; } }),
