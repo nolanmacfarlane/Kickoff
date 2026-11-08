@@ -109,12 +109,13 @@
 .toast--leaving { animation: toast-out .16s ease-in forwards; }
 .toast__msg { flex: 1 1 auto; min-width: 0; padding-block: var(--s-1); }
 .toast__undo {
-  flex: none; border: 0; border-radius: var(--r-md); padding: var(--s-2) var(--s-3); background: none;
-  color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+  flex: none; border: 0; border-radius: var(--r-md); padding: var(--s-2) var(--s-3);
+  background: color-mix(in srgb, var(--on-ink) 16%, transparent); color: inherit; font: inherit; font-weight: 700; cursor: pointer;
 }
 .toast__close { flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; opacity: .75; cursor: pointer; }
 .toast__close .icon { width: 18px; height: 18px; }
-.toast__undo:hover, .toast__close:hover { background: color-mix(in srgb, var(--on-ink) 14%, transparent); opacity: 1; }
+.toast__undo:hover { background: color-mix(in srgb, var(--on-ink) 26%, transparent); }
+.toast__close:hover { background: color-mix(in srgb, var(--on-ink) 14%, transparent); opacity: 1; }
 .toast__undo:focus-visible, .toast__close:focus-visible { outline: 2px solid var(--on-ink); outline-offset: 1px; }
 /* Time left. Shrinks to nothing, then the toast goes (dom.ts listens for animationend). */
 .toast__bar {

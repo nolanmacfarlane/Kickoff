@@ -2,3 +2,4 @@ node_modules/
 public/app.js
 src/ts/components/tiles.ts
 tests/.rules.test.cjs
+.claude/

@@ -78,9 +78,9 @@ export function tag(text: string, extra = ''): HTMLElement { return h('span', { 
 // ---------- toast ----------
 // Time on screen grows with the length of the message, and there is longer to reach Undo. The bar at the bottom shows
 // the time left. It pauses while the pointer or keyboard focus is on the toasts, or the tab is hidden.
-// Every toast is also passed to the logger (main.ts puts it in the activity history).
+// Every toast is also passed to the logger (main.ts puts it in the activity history); `log` overrides the text it gets.
 type Outcome = { ok: true; undo?: () => Outcome } | { ok: false; error: string };
-export interface ToastOptions { undo?: () => Outcome; tone?: 'error' }
+export interface ToastOptions { undo?: () => Outcome; tone?: 'error'; log?: string }
 const MAX_TOASTS = 4;
 const toastMs = (message: string, undo: boolean) => Math.min(12_000, Math.max(undo ? 8_000 : 5_000, 2_500 + message.length * 60));
 let toastLogger: ((message: string) => void) | null = null;
@@ -89,7 +89,7 @@ export function onToast(fn: (message: string) => void): void { toastLogger = fn;
 export function toast(message: string, o: ToastOptions = {}): void {
   const region = document.getElementById('toast-region');
   if (!region) return;
-  toastLogger?.(message);
+  toastLogger?.(o.log ?? message);
   const dismiss = () => { if (!t.isConnected || t.classList.contains('toast--leaving')) return; t.classList.add('toast--leaving'); setTimeout(() => t.remove(), 160); };
   const undo = o.undo;
   const t = h('div', { class: `toast${o.tone === 'error' ? ' toast--error' : ''}`, role: o.tone === 'error' ? 'alert' : 'status' },
@@ -97,7 +97,8 @@ export function toast(message: string, o: ToastOptions = {}): void {
     undo && h('button', { class: 'toast__undo', type: 'button', onClick: () => {
       dismiss();
       const r = undo();
-      if (r.ok) toast(`Undone: ${message}`); else toast(r.error, { tone: 'error' });
+      // Short and generic on screen (the page itself shows what changed back); the history says what was undone.
+      if (r.ok) toast('Action undone.', { log: `Undid “${message}”` }); else toast(r.error, { tone: 'error' });
     } }, 'Undo'),
     h('button', { class: 'toast__close', type: 'button', 'aria-label': 'Dismiss', title: 'Dismiss', onClick: dismiss }, icon('close')),
     h('span', { class: 'toast__bar', 'aria-hidden': 'true', style: `--toast-ms:${toastMs(message, !!undo)}ms`, onAnimationend: dismiss }));
