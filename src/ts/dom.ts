@@ -86,7 +86,9 @@ const toastMs = (message: string, undo: boolean) => Math.min(12_000, Math.max(un
 let toastLogger: ((message: string) => void) | null = null;
 export function onToast(fn: (message: string) => void): void { toastLogger = fn; }
 
-export function toast(message: string, o: ToastOptions = {}): void {
+export function toast(message: string, o: ToastOptions = {}): void { showToast(message, o); }
+// `replace`: swap this toast for an existing one in the same spot, with no exit/entry animation (used by Undo).
+function showToast(message: string, o: ToastOptions, replace?: HTMLElement): void {
   const region = document.getElementById('toast-region');
   if (!region) return;
   toastLogger?.(o.log ?? message);
@@ -95,14 +97,15 @@ export function toast(message: string, o: ToastOptions = {}): void {
   const t = h('div', { class: `toast${o.tone === 'error' ? ' toast--error' : ''}`, role: o.tone === 'error' ? 'alert' : 'status' },
     h('span', { class: 'toast__msg' }, message),
     undo && h('button', { class: 'toast__undo', type: 'button', onClick: () => {
-      dismiss();
+      if (t.classList.contains('toast--leaving')) return;
       const r = undo();
       // Short and generic on screen (the page itself shows what changed back); the history says what was undone.
-      if (r.ok) toast('Action undone.', { log: `Undid “${message}”` }); else toast(r.error, { tone: 'error' });
+      // The result takes this toast's place rather than fading one out and another in.
+      if (r.ok) showToast('Action undone.', { log: `Undid “${message}”` }, t); else showToast(r.error, { tone: 'error' }, t);
     } }, 'Undo'),
     h('button', { class: 'toast__close', type: 'button', 'aria-label': 'Dismiss', title: 'Dismiss', onClick: dismiss }, icon('close')),
     h('span', { class: 'toast__bar', 'aria-hidden': 'true', style: `--toast-ms:${toastMs(message, !!undo)}ms`, onAnimationend: dismiss }));
-  region.append(t);
+  if (replace?.isConnected) { t.classList.add('toast--swapped'); replace.replaceWith(t); } else region.append(t);
   const shown = Array.from(region.querySelectorAll('.toast:not(.toast--leaving)'));
   shown.slice(0, Math.max(0, shown.length - MAX_TOASTS)).forEach((x) => x.remove());
 }

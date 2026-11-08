@@ -105,6 +105,7 @@
   background: var(--ink); color: var(--on-ink); padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4); border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop); font-weight: 500; animation: toast-in .2s ease-out;
 }
+.toast--swapped { animation: none; }
 .toast--error { border-left: 4px solid var(--bad); }
 .toast--leaving { animation: toast-out .16s ease-in forwards; }
 .toast__msg { flex: 1 1 auto; min-width: 0; padding-block: var(--s-1); }
