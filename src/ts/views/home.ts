@@ -22,7 +22,7 @@ export function render(): HTMLElement {
 
   // Close-up around you and the nearest invites. The whole map is one big link to the Map tab.
   const mini = mapWidget({
-    key: 'mini', interactive: false, user: me, fitTo: [me, ...closest.map((i) => i.location)], maxZoom: 15,
+    key: 'mini', reuse: true, interactive: false, user: me, fitTo: [me, ...closest.map((i) => i.location)], maxZoom: 15,
     pins: groupPins(groupInvites(nearby), me),
   });
 

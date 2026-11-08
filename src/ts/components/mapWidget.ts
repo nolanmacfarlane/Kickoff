@@ -16,6 +16,7 @@ export interface MapOptions {
   user?: LatLng;                      // draws the "you are here" dot
   interactive?: boolean;              // false = a picture-like map (Home)
   remember?: boolean;                 // restore last pan/zoom for this key
+  reuse?: boolean;                    // keep the same map across re-renders (no tile reload/flicker); only pins and fit update
   onSelect?: (id: string) => void;
   onPick?: (lat: number, lng: number) => void;
   className?: string;
@@ -29,12 +30,30 @@ export interface MapHandle {
 
 const VICTORIA: LatLng = { lat: 48.4284, lng: -123.3656 };
 const BOUNDS = L.latLngBounds([48.30, -123.62], [48.60, -123.12]);
-const live = new Map<string, L.Map>();
+const live = new Map<string, { handle: MapHandle; sig: string; fitKey: string }>();
 const saved = new Map<string, { c: L.LatLng; z: number }>();
-export function destroyMaps(): void { live.forEach((m) => m.remove()); live.clear(); }
+/** Remove maps that are no longer on the page. Call after the new view is in place, so reused maps survive. */
+export function destroyMaps(): void {
+  live.forEach((m, key) => { if (!m.handle.el.isConnected) { m.handle.map.remove(); live.delete(key); } });
+}
+
+const ptsKey = (pts?: LatLng[]) => (pts ?? []).map((p) => `${p.lat},${p.lng}`).join(';');
 
 export function mapWidget(o: MapOptions): MapHandle {
-  live.get(o.key)?.remove();
+  const theme = document.documentElement.dataset.theme ?? '';
+  const sig = `${theme}|${o.interactive !== false}|${o.user ? ptsKey([o.user]) : ''}|${!!o.onSelect}|${!!o.onPick}|${o.className ?? ''}`;
+  const fitKey = ptsKey(o.fitTo);
+  const prev = live.get(o.key);
+  if (prev && o.reuse && prev.sig === sig) {
+    prev.handle.setPins(o.pins, o.selectedId ?? null);
+    if (prev.fitKey !== fitKey) {
+      prev.fitKey = fitKey;
+      if (o.fitTo?.length) prev.handle.onSized(() => prev.handle.map.fitBounds(
+        L.latLngBounds(o.fitTo!.map((p) => [p.lat, p.lng] as L.LatLngTuple)), { padding: [32, 32], maxZoom: o.maxZoom ?? 15, animate: false }));
+    }
+    return prev.handle;
+  }
+  prev?.handle.map.remove();
   const interactive = o.interactive !== false;
   const el = h('div', { class: `map ${o.onPick ? 'map--pick' : ''} ${o.className ?? ''}`.trim() });
   const map = L.map(el, {
@@ -42,7 +61,6 @@ export function mapWidget(o: MapOptions): MapHandle {
     scrollWheelZoom: interactive, boxZoom: interactive, keyboard: interactive,
     maxBounds: BOUNDS, maxBoundsViscosity: 0.8, minZoom: 11, maxZoom: 18,
   });
-  live.set(o.key, map);
   map.attributionControl.setPrefix(false);
   const dark = document.documentElement.dataset.theme === 'dark';
   L.tileLayer(dark ? TILES.dark : TILES.light, { ...TILE_OPTIONS, attribution: ATTRIBUTION }).addTo(map);
@@ -126,5 +144,7 @@ export function mapWidget(o: MapOptions): MapHandle {
 
   if (o.onPick) map.on('click', (e: L.LeafletMouseEvent) => o.onPick!(Math.round(e.latlng.lat * 1e5) / 1e5, Math.round(e.latlng.lng * 1e5) / 1e5));
   setPins(o.pins, o.selectedId ?? null);
-  return { el, map, setPins, focus, onSized };
+  const handle: MapHandle = { el, map, setPins, focus, onSized };
+  live.set(o.key, { handle, sig, fitKey });
+  return handle;
 }

@@ -56,7 +56,7 @@ function render(fromState = false): void {
   const me = currentUser();
   currentHash = location.hash;
   if (!me) {
-    if (mode !== 'onboarding') { mode = 'onboarding'; setGuard(null); destroyMaps(); document.body.dataset.route = 'onboarding'; document.title = 'Welcome | Kickoff'; app.replaceChildren(onboarding.render()); }
+    if (mode !== 'onboarding') { mode = 'onboarding'; setGuard(null); document.body.dataset.route = 'onboarding'; document.title = 'Welcome | Kickoff'; app.replaceChildren(onboarding.render()); destroyMaps(); }
     return;
   }
   mode = 'app';
@@ -66,7 +66,6 @@ function render(fromState = false): void {
   const scrollY = window.scrollY;
   setGuard(null);          // a screen with a form registers its own guard while it renders
   setRefresher(null);      // ...and a screen that updates itself registers a refresher
-  destroyMaps();
   document.body.dataset.route = name;
   let view: HTMLElement;
   try { view = route.render(args); } catch (err) {
@@ -74,6 +73,7 @@ function render(fromState = false): void {
     view = h('div', { class: 'empty' }, h('h3', {}, 'Something went wrong loading this screen'), h('p', {}, 'Try another tab, or reload the page.'));
   }
   app.replaceChildren(view);
+  destroyMaps();           // after the swap, so maps the new view reused (Home mini-map) are kept
   document.title = `${route.title} | Kickoff`;
   document.querySelectorAll<HTMLElement>('.tab').forEach((t) => {
     if (t.dataset.tab === route.tab) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
