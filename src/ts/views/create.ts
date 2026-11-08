@@ -70,7 +70,7 @@ export function render(): HTMLElement {
     }
     if (!res.ok) { error = res.error; return draw(true); }
     form = null; error = '';
-    toast('Invite created. It is now on the map.');
+    toast('Invite created. It is now on the map.', { undo: res.undo });
     go(`#/map/${res.id}`);
   }
 

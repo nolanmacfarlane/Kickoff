@@ -58,11 +58,11 @@ function profileEditor(): HTMLElement {
     editing = null; setGuard(null);              // clear first: updateProfile triggers a re-render
     const res = updateProfile(draftToProfile(d));
     if (!res.ok) { editing = ed; return fail(res.error); }
-    toast('Profile saved. Your suggestions are updated.');
+    toast('Profile saved. Your suggestions are updated.', { undo: res.undo });
     return true;
   }
   const bar = saveBar({ section: 'profile', isDirty: dirty, onSave: save,
-    onDiscard: () => { editing = null; page.replaceWith(profileEditor()); toast('Changes discarded.'); } });
+    onDiscard: () => { editing = null; page.replaceWith(profileEditor()); toast('Changes discarded.', { undo: restoreDraft('profile', () => { editing = ed; }, profileEditor) }); } });
   setGuard({ isDirty: dirty, save, discard: () => { editing = null; } });
 
   function draw(): void {
@@ -72,10 +72,15 @@ function profileEditor(): HTMLElement {
       h('section', { class: 'card stack' }, h('h2', {}, 'Schedule'), calendarField(d, draw, me.settings.weekStart)))));
     bar.refresh();
   }
-  const page = h('div', { class: 'editor' }, root, bar.el);
+  const page = h('div', { class: 'editor', dataset: { section: 'profile' } }, root, bar.el);
   watchEdits(root, bar.refresh);
   draw();
   return page;
+}
+
+/** Undo for "Changes discarded": puts the draft back, and redraws that editor if it is on screen. */
+function restoreDraft(section: string, restore: () => void, rebuild: () => HTMLElement): () => { ok: true } {
+  return () => { restore(); document.querySelector(`.editor[data-section="${section}"]`)?.replaceWith(rebuild()); return { ok: true }; };
 }
 
 // Same pattern as the profile editor: changes go into a draft and only apply when saved.
@@ -98,11 +103,11 @@ function personalization(): HTMLElement {
     settingsEdit = null; setGuard(null);         // clear first: updateSettings triggers a re-render
     const res = updateSettings(s);
     if (!res.ok) { settingsEdit = ed; bar.setError(res.error); return false; }
-    toast('Personalization saved.');
+    toast('Personalization saved.', { undo: res.undo });
     return true;
   }
   const bar = saveBar({ section: 'personalization', isDirty: dirty, onSave: save,
-    onDiscard: () => { settingsEdit = null; page.replaceWith(personalization()); toast('Changes discarded.'); } });
+    onDiscard: () => { settingsEdit = null; page.replaceWith(personalization()); toast('Changes discarded.', { undo: restoreDraft('personalization', () => { settingsEdit = ed; }, personalization) }); } });
   setGuard({ isDirty: dirty, save, discard: () => { settingsEdit = null; } });
 
   /** Change the draft and redraw (hints depend on the chosen values). */
@@ -154,7 +159,7 @@ function personalization(): HTMLElement {
         toggle('messages', 'New messages', 'Counts unread chats in the Social tab badge.')))));
     bar.refresh();
   }
-  const page = h('div', { class: 'editor' }, root, bar.el);
+  const page = h('div', { class: 'editor', dataset: { section: 'personalization' } }, root, bar.el);
   watchEdits(root, bar.refresh);
   draw();
   return page;
@@ -224,7 +229,7 @@ export function render(args: string[]): HTMLElement {
 
   const askLogout = () => confirmDialog({
     title: 'Log out?', body: 'You will go back to the welcome screen.',
-    actions: [{ label: 'Stay logged in' }, { label: 'Log out', variant: 'danger', onClick: () => { editing = null; settingsEdit = null; setGuard(null); logout(); go('#/home'); toast('You are logged out.'); } }],
+    actions: [{ label: 'Stay logged in' }, { label: 'Log out', variant: 'danger', onClick: () => { editing = null; settingsEdit = null; setGuard(null); toast('You are logged out.'); logout(); go('#/home'); } }],
   });
 
   return h('div', { class: 'profile-layout' },

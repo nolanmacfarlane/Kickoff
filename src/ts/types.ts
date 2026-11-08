@@ -127,8 +127,9 @@ export interface AppState {
   chatReads: Record<string, Record<string, number>>;   // userId -> chatId -> time last read
 }
 
-/** conflicts: your other invites that overlap in time. The caller may ask the person and try again with force. */
-export type Result = { ok: true; id?: string } | { ok: false; error: string; conflicts?: Invite[] };
+/** conflicts: your other invites that overlap in time. The caller may ask the person and try again with force.
+ *  undo: reverses the action (and anything it told other people) if that is still possible. */
+export type Result = { ok: true; id?: string; undo?: () => Result } | { ok: false; error: string; conflicts?: Invite[] };
 
 export type NewInviteInput = Omit<Invite, 'id' | 'hostId' | 'memberIds'>;
 export type TagEdit = Partial<Pick<Invite, 'skills' | 'vibe' | 'visibility'>>;

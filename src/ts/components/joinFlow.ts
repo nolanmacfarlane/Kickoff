@@ -9,7 +9,7 @@ export const describeConflicts = (list: Invite[]): string =>
 export function joinInvite(inviteId: string): void {
   const attempt = (force: boolean): void => {
     const r = acceptInvite(inviteId, Date.now(), force);
-    if (r.ok) { toast('You are in. The host and other members have been told.'); return; }
+    if (r.ok) { toast('You are in. The host and other members have been told.', { undo: r.undo }); return; }
     if (r.conflicts?.length) {
       confirmDialog({
         title: 'This overlaps with another invite',
@@ -18,7 +18,7 @@ export function joinInvite(inviteId: string): void {
       });
       return;
     }
-    toast(r.error);
+    toast(r.error, { tone: 'error' });
   };
   attempt(false);
 }

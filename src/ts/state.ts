@@ -11,7 +11,7 @@ let st: AppState;
 let counter = 1000;
 const listeners = new Set<() => void>();
 const nid = (p: string) => `${p}-${++counter}`;
-const ok = (id?: string): Result => ({ ok: true, id });
+const ok = (id?: string, undo?: () => Result): Result => ({ ok: true, id, undo });
 const fail = (error: string): Result => ({ ok: false, error });
 
 export const MIN_CAPACITY = 2;
@@ -65,8 +65,40 @@ function notify(userId: string, inviteId: string | null, text: string, createdAt
   if (!wants(st.users[userId], kind)) return;
   st.notifications.unshift({ id: nid('n'), userId, inviteId, kind, text, createdAt, read: false });
 }
+const loggedNow = new Set<string>();   // users whose history got an entry in the current task (cleared after it)
 function log(userId: string, text: string, at = Date.now(), inviteId: string | null = null): void {
   st.activity.unshift({ id: nid('a'), userId, text, at, inviteId });
+  if (!loggedNow.size) queueMicrotask(() => loggedNow.clear());
+  loggedNow.add(userId);
+}
+/** Puts a toast in the signed-in user's history, unless the action it reports already wrote a (more detailed) entry. */
+export function logNote(text: string): void {
+  const me = currentUser();
+  if (!me || loggedNow.has(me.id)) return;
+  st.activity.unshift({ id: nid('a'), userId: me.id, text, at: Date.now(), inviteId: null });
+  emit();
+}
+
+// ---------- undo ----------
+// Actions return an undo that puts back exactly what they changed. Ids from nid() count up, so "what this action
+// made" is every id between two counter readings. Your own history keeps the entry; undoing is logged separately.
+
+/** Takes back what an action told other people: the notifications and chat lines it created. */
+function retract(from: number, to: number): void {
+  const made = (x: { id: string }) => { const n = Number(x.id.slice(x.id.lastIndexOf('-') + 1)); return n > from && n <= to; };
+  st.notifications = st.notifications.filter((n) => !made(n));
+  st.messages = st.messages.filter((m) => !made(m));
+}
+/** Runs at most once, and only while the same person is signed in. */
+function undoable(userId: string, fn: () => Result): () => Result {
+  let used = false;
+  return () => {
+    if (used) return fail('That was already undone.');
+    if (st.currentUserId !== userId) return fail('You are no longer signed in as that person.');
+    const r = fn();
+    if (r.ok) { used = true; emit(); }
+    return r;
+  };
 }
 
 // ---------- selectors ----------
@@ -182,11 +214,19 @@ export function sendFriendRequest(otherId: string): Result {
   const other = getUser(otherId);
   if (!me || !other) return fail('User not found.');
   if (!canRequestFriend(otherId)) return fail('You can only request people you have seen on an invite or who were suggested to you.');
-  st.friendRequests.push({ id: nid('fr'), fromId: me.id, toId: otherId, createdAt: Date.now() });
+  const n0 = counter;
+  const req: FriendRequest = { id: nid('fr'), fromId: me.id, toId: otherId, createdAt: Date.now() };
+  st.friendRequests.push(req);
   notify(otherId, null, `${me.name} sent you a friend request`, Date.now(), 'friend');
   log(me.id, `You sent ${other.name} a friend request`);
+  const n1 = counter;
   emit();
-  return ok();
+  return ok(undefined, undoable(me.id, () => {
+    if (!st.friendRequests.includes(req)) return fail(`${other.name} has already answered your request.`);
+    st.friendRequests = st.friendRequests.filter((r) => r !== req);
+    retract(n0, n1);
+    return ok();
+  }));
 }
 export function acceptFriendRequest(requestId: string): Result { return acceptFriendRequestAs(st.currentUserId, requestId); }
 /** Demo bots use this to accept a request on behalf of someone who is not signed in. */
@@ -195,13 +235,22 @@ export function acceptFriendRequestAs(userId: string | null, requestId: string):
   const req = st.friendRequests.find((r) => r.id === requestId);
   if (!me || !req || req.toId !== me.id) return fail('Request not found.');
   const from = getUser(req.fromId)!;
+  const n0 = counter;
   me.friendIds.push(from.id);
   from.friendIds.push(me.id);
   st.friendRequests = st.friendRequests.filter((r) => r.id !== requestId);
   notify(from.id, null, `${me.name} accepted your friend request`, Date.now(), 'friend');
   log(me.id, `You and ${from.name} are now friends`);
+  const n1 = counter;
   emit();
-  return ok();
+  return ok(undefined, undoable(me.id, () => {
+    if (!me.friendIds.includes(from.id)) return fail(`You and ${from.name} are no longer friends.`);
+    me.friendIds = me.friendIds.filter((id) => id !== from.id);
+    from.friendIds = from.friendIds.filter((id) => id !== me.id);
+    st.friendRequests.push(req);
+    retract(n0, n1);
+    return ok();
+  }));
 }
 /** Decline an incoming request, or cancel one you sent. */
 export function declineFriendRequest(requestId: string): Result {
@@ -210,22 +259,41 @@ export function declineFriendRequest(requestId: string): Result {
   if (!me || !req || (req.toId !== me.id && req.fromId !== me.id)) return fail('Request not found.');
   st.friendRequests = st.friendRequests.filter((r) => r.id !== requestId);
   emit();
-  return ok();
+  const otherId = req.fromId === me.id ? req.toId : req.fromId;
+  return ok(undefined, undoable(me.id, () => {
+    if (me.friendIds.includes(otherId) || st.friendRequests.some((r) => betweenUs(r, me.id, otherId)))
+      return fail(`Things have changed with ${getUser(otherId)!.name} since then.`);
+    st.friendRequests.push(req);
+    return ok();
+  }));
 }
+
+const betweenUs = (r: FriendRequest, a: string, b: string): boolean => (r.fromId === a && r.toId === b) || (r.fromId === b && r.toId === a);
 
 /** Unfriend, both ways. The other person is not told. Your direct chat is deleted for both of you. */
 export function removeFriend(otherId: string): Result {
   const me = currentUser();
   const other = getUser(otherId);
   if (!me || !other || !me.friendIds.includes(otherId)) return fail('You are not friends with this person.');
+  const at = [me.friendIds.indexOf(otherId), other.friendIds.indexOf(me.id)];
+  const chat = directChatId(me.id, otherId);
+  const lost = st.messages.filter((m) => m.chatId === chat);
+  const reads = [me.id, otherId].map((id) => st.chatReads[id]?.[chat]);
   me.friendIds = me.friendIds.filter((id) => id !== otherId);
   other.friendIds = other.friendIds.filter((id) => id !== me.id);
-  const chat = directChatId(me.id, otherId);
   st.messages = st.messages.filter((m) => m.chatId !== chat);
   for (const id of [me.id, otherId]) if (st.chatReads[id]) delete st.chatReads[id][chat];
   log(me.id, `You removed ${other.name} as a friend`);
   emit();
-  return ok();
+  return ok(undefined, undoable(me.id, () => {
+    if (me.friendIds.includes(otherId)) return fail(`You and ${other.name} are already friends again.`);
+    me.friendIds.splice(at[0], 0, otherId);
+    other.friendIds.splice(at[1], 0, me.id);
+    st.friendRequests = st.friendRequests.filter((r) => !betweenUs(r, me.id, otherId));   // any request sent since is moot
+    st.messages.push(...lost);
+    [me.id, otherId].forEach((id, k) => { const t = reads[k]; if (t !== undefined) st.chatReads[id] = { ...st.chatReads[id], [chat]: t }; });
+    return ok();
+  }));
 }
 
 /** When you last played with someone (start of the most recent past invite you were both in), or null. */
@@ -261,17 +329,20 @@ export function updateProfile(patch: Partial<Omit<User, 'id' | 'friendIds' | 'se
   if (!me) return fail('Not signed in.');
   const nameErr = patch.name === undefined ? null : nameError(patch.name);
   if (nameErr) return fail(nameErr);
+  const prev: Record<string, unknown> = {};
+  for (const k of Object.keys(patch) as (keyof typeof patch)[]) prev[k] = structuredClone(me[k]);
   Object.assign(me, patch);
   emit();
-  return ok();
+  return ok(undefined, undoable(me.id, () => { Object.assign(me, prev); return ok(); }));
 }
 
 export function updateSettings(patch: SettingsPatch): Result {
   const me = currentUser();
   if (!me) return fail('Not signed in.');
+  const prev = me.settings;
   me.settings = { ...me.settings, ...patch, notify: { ...me.settings.notify, ...patch.notify }, inviteDefaults: { ...me.settings.inviteDefaults, ...patch.inviteDefaults } };
   emit();
-  return ok();
+  return ok(undefined, undoable(me.id, () => { me.settings = prev; return ok(); }));
 }
 
 // ---------- invite actions ----------
@@ -294,12 +365,21 @@ export function createInvite(input: NewInviteInput, now = Date.now(), force = fa
   if (input.gear.available && !input.gear.description.trim()) return fail('Describe the gear you can share, or untick the box.');
   const clash = conflictsFor(me.id, input.start, input.end, undefined, now);
   if (clash.length && !force) return { ok: false, error: 'This overlaps with an invite you are already going to.', conflicts: clash };
+  const n0 = counter;
   const inv: Invite = { ...input, id: nid('i'), hostId: me.id, memberIds: [me.id] };
   st.invites.push(inv);
   me.friendIds.forEach((fid) => notify(fid, inv.id, `${me.name} created a ${getSport(inv.sportId)!.name} invite`, now, 'friendInvite'));
   log(me.id, `You created a ${getSport(inv.sportId)!.name} invite at ${inv.location.label}`, now, inv.id);
+  const n1 = counter;
   emit();
-  return ok(inv.id);
+  return ok(inv.id, undoable(me.id, () => {
+    if (!st.invites.includes(inv)) return fail('This invite no longer exists.');
+    if (inv.memberIds.length > 1) return fail('Someone has already joined, so it can no longer be undone.');
+    st.invites = st.invites.filter((i) => i !== inv);
+    st.messages = st.messages.filter((m) => m.chatId !== inviteChatId(inv.id));
+    retract(n0, n1);
+    return ok();
+  }));
 }
 
 export function acceptInvite(inviteId: string, now = Date.now(), force = false): Result { return acceptInviteAs(st.currentUserId, inviteId, now, force); }
@@ -315,14 +395,23 @@ export function acceptInviteAs(userId: string | null, inviteId: string, now = Da
   if (isFull(inv)) return fail('This invite is full.');
   const clash = conflictsFor(me.id, inv.start, inv.end, inv.id, now);
   if (clash.length && !force) return { ok: false, error: 'This overlaps with an invite you are already going to.', conflicts: clash };
+  const n0 = counter;
   inv.memberIds.push(me.id);
   const sport = getSport(inv.sportId)!.name;
   inv.memberIds.filter((id) => id !== me.id).forEach((id) => notify(id, inv.id, `${me.name} joined your ${sport} invite`, now, 'join'));
   if (isFull(inv)) inv.memberIds.forEach((id) => notify(id, inv.id, `Your ${sport} invite is now full`, now, 'join'));
   log(me.id, `You joined ${sport} at ${inv.location.label}`, now, inv.id);
   addMessage(inviteChatId(inv.id), null, `${me.name} joined`, now);
+  const n1 = counter;
   emit();
-  return ok(inv.id);
+  return ok(inv.id, undoable(me.id, () => {
+    if (!st.invites.includes(inv) || !inv.memberIds.includes(me.id)) return fail('You are no longer in this invite.');
+    if (isPast(inv)) return fail('This invite has already happened.');
+    if (inv.hostId === me.id) return fail('You are now the host. Leave from the invite instead.');
+    inv.memberIds = inv.memberIds.filter((id) => id !== me.id);
+    retract(n0, n1);
+    return ok();
+  }));
 }
 
 export function leaveInvite(inviteId: string, now = Date.now()): Result {
@@ -332,6 +421,8 @@ export function leaveInvite(inviteId: string, now = Date.now()): Result {
   if (!inv.memberIds.includes(me.id)) return fail('You are not in this invite.');
   const sport = getSport(inv.sportId)!.name;
   const wasHost = inv.hostId === me.id;
+  const before = { memberIds: [...inv.memberIds], chat: st.messages.filter((m) => m.chatId === inviteChatId(inv.id)) };
+  const n0 = counter;
   inv.memberIds = inv.memberIds.filter((id) => id !== me.id);
   log(me.id, `You left ${sport} at ${inv.location.label}`, now, inv.id);
   if (inv.memberIds.length === 0) {
@@ -346,8 +437,24 @@ export function leaveInvite(inviteId: string, now = Date.now()): Result {
     }
     inv.memberIds.filter((id) => id !== inv.hostId || !wasHost).forEach((id) => notify(id, inv.id, `${me.name} left your ${sport} invite`, now, 'leave'));
   }
+  const n1 = counter;
+  const nextHost = inv.hostId;
   emit();
-  return ok();
+  return ok(undefined, undoable(me.id, () => {
+    if (isPast(inv)) return fail('This invite has already happened.');
+    if (!st.invites.includes(inv)) {   // you were the last one, so it was deleted: bring it back as it was
+      inv.memberIds = before.memberIds;
+      st.invites.push(inv);
+      st.messages.push(...before.chat);
+      return ok();
+    }
+    if (inv.memberIds.includes(me.id)) return fail('You are already back in this invite.');
+    if (isFull(inv)) return fail('Someone has taken your spot.');
+    inv.memberIds.splice(before.memberIds.indexOf(me.id), 0, me.id);
+    if (wasHost && inv.hostId === nextHost) inv.hostId = me.id;
+    retract(n0, n1);
+    return ok();
+  }));
 }
 
 /** Host-only, and only while the host is alone. Changing tags never touches capacity, time or place. */

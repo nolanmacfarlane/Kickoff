@@ -96,12 +96,38 @@
 .empty h3 { color: var(--ink); margin-bottom: var(--s-2); }
 .empty .btn { margin-top: var(--s-4); }
 
-.toast-region { position: fixed; left: 50%; bottom: var(--s-5); transform: translateX(-50%); z-index: 60; display: grid; gap: var(--s-2); }
+.toast-region {
+  position: fixed; left: 50%; bottom: calc(var(--s-5) + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60;
+  display: grid; gap: var(--s-2); width: max-content; max-width: min(34rem, calc(100vw - 2 * var(--s-4)));
+}
 .toast {
-  background: var(--ink); color: var(--on-ink); padding: var(--s-3) var(--s-5); border-radius: var(--r-pill);
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: var(--s-2);
+  background: var(--ink); color: var(--on-ink); padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4); border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop); font-weight: 500; animation: toast-in .2s ease-out;
 }
+.toast--error { border-left: 4px solid var(--bad); }
+.toast--leaving { animation: toast-out .16s ease-in forwards; }
+.toast__msg { flex: 1 1 auto; min-width: 0; padding-block: var(--s-1); }
+.toast__undo {
+  flex: none; border: 0; border-radius: var(--r-md); padding: var(--s-2) var(--s-3); background: none;
+  color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.toast__close { flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; opacity: .75; cursor: pointer; }
+.toast__close .icon { width: 18px; height: 18px; }
+.toast__undo:hover, .toast__close:hover { background: color-mix(in srgb, var(--on-ink) 14%, transparent); opacity: 1; }
+.toast__undo:focus-visible, .toast__close:focus-visible { outline: 2px solid var(--on-ink); outline-offset: 1px; }
+/* Time left. Shrinks to nothing, then the toast goes (dom.ts listens for animationend). */
+.toast__bar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--on-ink); opacity: .45;
+  transform-origin: left; animation: toast-time var(--toast-ms) linear forwards;
+}
+.toast--error .toast__bar { background: var(--bad); opacity: 1; }
+.toast-region:hover .toast__bar, .toast-region:focus-within .toast__bar, .toast-region[data-paused] .toast__bar { animation-play-state: paused; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(4px); } }
+@keyframes toast-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+/* The bar is a timer, not decoration: keep its real length even when motion is reduced (base.css shortens all animations). */
+@media (prefers-reduced-motion: reduce) { .toast__bar { animation-duration: var(--toast-ms) !important; } }
 
 /* ---------- icon buttons ---------- */
 .icon-btn {

@@ -5,7 +5,7 @@ import { seg, toggleBox } from '../components/seg';
 import { socialNav, type SocialTab } from '../components/socialNav';
 import { inviteCard } from '../components/inviteCard';
 import { uiIcon } from '../components/sportBits';
-import { avatar, type Child, confirmDialog, fmtAgo, go, h, keepFocus, toast } from '../dom';
+import { avatar, type Child, confirmDialog, fmtAgo, go, h, keepFocus, report } from '../dom';
 import { setRefresher } from '../nav';
 import {
   acceptFriendRequest, chatSummaries, currentUser, declineFriendRequest, directChatId, friendsPlans, getSport, getUser, incomingRequests, lastPlayedWith,
@@ -132,15 +132,15 @@ const noInvites = () => h('div', { class: 'empty' }, h('h3', {}, 'No invites yet
 function incomingRow(r: FriendRequest): HTMLElement {
   const u = getUser(r.fromId)!;
   return h('li', { class: 'response response--unread' }, avatar(u, 'sm'), h('span', { class: 'grow' }, `${u.name} wants to be friends`),
-    h('button', { class: 'btn btn--primary btn--sm', type: 'button', onClick: () => { const x = acceptFriendRequest(r.id); toast(x.ok ? `You and ${u.name} are now friends.` : x.error); } }, 'Accept'),
+    h('button', { class: 'btn btn--primary btn--sm', type: 'button', onClick: () => report(acceptFriendRequest(r.id), `You and ${u.name} are now friends.`) }, 'Accept'),
     h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onClick: () => confirmDialog({ title: `Decline ${u.name}'s request?`, body: `${u.name} will not be told, but the request will be removed.`,
-      actions: [{ label: 'Keep request' }, { label: 'Decline', variant: 'danger', onClick: () => declineFriendRequest(r.id) }] }) }, 'Decline'));
+      actions: [{ label: 'Keep request' }, { label: 'Decline', variant: 'danger', onClick: () => report(declineFriendRequest(r.id), `You declined ${u.name}'s request.`) }] }) }, 'Decline'));
 }
 function outgoingRow(r: FriendRequest): HTMLElement {
   const u = getUser(r.toId)!;
   return h('li', { class: 'response' }, avatar(u, 'sm'), h('span', { class: 'grow' }, `Waiting for ${u.name}`),
     h('button', { class: 'btn btn--text btn--sm', type: 'button', onClick: () => confirmDialog({ title: 'Cancel friend request?', body: `Your request to ${u.name} will be withdrawn. You can send a new one later.`,
-      actions: [{ label: 'Keep request' }, { label: 'Cancel request', variant: 'danger', onClick: () => declineFriendRequest(r.id) }] }) }, 'Cancel'));
+      actions: [{ label: 'Keep request' }, { label: 'Cancel request', variant: 'danger', onClick: () => report(declineFriendRequest(r.id), `Your request to ${u.name} was cancelled.`) }] }) }, 'Cancel'));
 }
 const noRequests = () => h('div', { class: 'empty empty--tight' }, 'No pending requests. Find people on an invite and tap Add friend.');
 
@@ -152,7 +152,7 @@ function confirmRemove(f: User): void {
   confirmDialog({
     title: `Remove ${f.name} as a friend?`,
     body: `You will no longer see each other's friends-only invites or plans, and your messages with ${f.name} will be deleted for both of you. ${f.name} will not be told. You can send a new request later.`,
-    actions: [{ label: 'Keep friend' }, { label: 'Remove friend', variant: 'danger', onClick: () => { const x = removeFriend(f.id); toast(x.ok ? `${f.name} was removed from your friends.` : x.error); } }],
+    actions: [{ label: 'Keep friend' }, { label: 'Remove friend', variant: 'danger', onClick: () => report(removeFriend(f.id), `${f.name} was removed from your friends.`) }],
   });
 }
 

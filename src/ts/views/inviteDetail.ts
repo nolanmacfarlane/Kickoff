@@ -5,7 +5,7 @@ import { SKILLS } from '../data';
 import { joinInvite } from '../components/joinFlow';
 import { shareInvite } from '../components/share';
 import { sportLabel, uiIcon } from '../components/sportBits';
-import { avatar, closeModal, confirmDialog, fmtWhen, go, h, openModal, tag, toast } from '../dom';
+import { avatar, closeModal, confirmDialog, fmtWhen, go, h, openModal, report, tag } from '../dom';
 import { matchInvite } from '../match';
 import {
   acceptFriendRequest, canSee, currentUser, editInviteTags, friendStatus, getInvite, getSport, getUser, getVenue,
@@ -31,7 +31,7 @@ function view(id: string): HTMLElement | null {
   const editable = isHost && !tagsLocked(inv) && !past;
   const venue = inv.location.venueId ? getVenue(inv.location.venueId) : undefined;
   const m = matchInvite(inv, me);
-  const run = (r: { ok: boolean } & { error?: string }, success?: string) => { if (!r.ok) toast(r.error ?? 'Something went wrong.'); else if (success) toast(success); };
+  const run = report;
   const field = (label: string, control: Node) => h('div', { class: 'field' }, h('span', { class: 'field__label' }, label), control);
 
   // Host alone: labelled controls, like Create invite. Otherwise just the tags.

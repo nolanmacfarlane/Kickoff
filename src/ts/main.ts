@@ -1,9 +1,9 @@
 // App entry: router, top tabs, notification badge, theme, and the unsaved-changes guard.
 import { startDemoBots } from './bots';
 import { destroyMaps } from './components/mapWidget';
-import { confirmDialog, go, h, keepFocus, refreshModal, setTimeFormat } from './dom';
+import { confirmDialog, go, h, keepFocus, onToast, refreshModal, setTimeFormat } from './dom';
 import { getGuard, getRefresher, setGuard, setRefresher } from './nav';
-import { currentUser, subscribe, unreadCount, unreadMessages } from './state';
+import { currentUser, logNote, subscribe, unreadCount, unreadMessages } from './state';
 import * as create from './views/create';
 import * as home from './views/home';
 import * as map from './views/map';
@@ -119,5 +119,6 @@ systemDark.addEventListener('change', () => {
 });
 // Closing the tab: browsers only allow their own generic warning.
 window.addEventListener('beforeunload', (e) => { if (getGuard()?.isDirty()) { e.preventDefault(); e.returnValue = ''; } });
+onToast(logNote);   // every toast also goes in the activity history
 startDemoBots();   // demo: fake users accept friend requests and join new invites
 render();

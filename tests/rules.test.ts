@@ -196,5 +196,93 @@ const catIds = sportCategories.flatMap((c) => c.sportIds);
 check('sport categories only list real sports', catIds.every((id) => sports.some((s) => s.id === id)));
 check('sport categories cover every sport', sports.every((s) => catIds.includes(s.id)));
 
-console.log(failed === 0 ? '\nAll rules pass.' : `\n${failed} failing.`);
-if (failed) throw new Error(`${failed} rule check(s) failed`);
+// ---- undo ----
+S.initState(); S.loginDemo();
+// Undo keeps your own history, so leave it out. Order of messages and read markers does not matter.
+const snap = () => {
+  const s = S.getState();
+  const reads = Object.fromEntries(Object.entries(s.chatReads).map(([u, r]) => [u, Object.fromEntries(Object.entries(r).sort())]));
+  return JSON.stringify({ ...s, activity: [], messages: [...s.messages].sort((a, b) => a.id.localeCompare(b.id)), chatReads: reads });
+};
+const target = S.mapInvites(demo).find((i) => !i.memberIds.includes(demo) && S.spotsLeft(i) >= 2)!;
+let saved = snap();
+const joined = S.acceptInvite(target.id, Date.now(), true);
+check('joining can be undone', joined.ok && !!joined.undo && joined.undo().ok);
+check('undoing a join puts everything back, including what others were told', snap() === saved);
+check('an undo only works once', joined.ok && !joined.undo!().ok);
+check('undoing keeps the history entry', S.activityFor(demo).some((a) => a.text.startsWith('You joined')));
+
+saved = snap();
+const left = S.leaveInvite('i-11');   // demo hosts i-11 with Maya and Chen: Maya takes over as host
+check('leaving hands over the host', left.ok && S.getInvite('i-11')!.hostId !== demo);
+check('undoing a leave restores you as host, in your old place', left.ok && left.undo!().ok && snap() === saved);
+
+const solo = S.createInvite({ ...S.getInvite('i-11')!, start: Date.now() + 200 * H, end: Date.now() + 201 * H }, Date.now(), true);
+const soloId = solo.ok ? solo.id! : '';
+S.sendMessage(S.inviteChatId(soloId), 'Bring water');
+saved = snap();
+const gone = S.leaveInvite(soloId);
+check('last one out deletes the invite', gone.ok && !S.getInvite(soloId));
+check('undo brings a deleted invite back with its chat', gone.ok && gone.undo!().ok && snap() === saved);
+
+const created = S.createInvite({ ...S.getInvite('i-11')!, start: Date.now() + 300 * H, end: Date.now() + 301 * H }, Date.now(), true);
+loginAs('u-maya'); S.acceptInvite(created.ok ? created.id! : '', Date.now(), true); loginAs(demo);
+check('cannot undo creating an invite once someone joined', created.ok && !created.undo!().ok && !!S.getInvite(created.id!));
+
+loginAs('u-maya');   // a two-person game: demo takes the last spot, leaves, and Tom grabs it
+const pair = S.createInvite({ ...S.getInvite('i-11')!, capacity: 2, visibility: 'open', start: Date.now() + 400 * H, end: Date.now() + 401 * H }, Date.now(), true);
+loginAs(demo);
+const pairId = pair.ok ? pair.id! : '';
+const took = S.acceptInvite(pairId, Date.now(), true);
+const leftPair = S.leaveInvite(pairId);
+loginAs('u-tom'); const tomIn = S.acceptInvite(pairId, Date.now(), true).ok; loginAs(demo);
+check('cannot undo leaving once your spot is taken', took.ok && leftPair.ok && tomIn && !leftPair.undo!().ok);
+
+saved = snap();
+const removed = S.removeFriend('u-maya');
+check('removing a friend deletes the chat', removed.ok && S.messagesIn(S.directChatId(demo, 'u-maya')).length === 0);
+check('undoing an unfriend restores the friendship and the chat', removed.ok && removed.undo!().ok && snap() === saved);
+
+const req = S.sendFriendRequest('u-dev');
+const sentReq = S.getState().friendRequests.find((r) => r.toId === 'u-dev');
+check('a sent request can be taken back', req.ok && req.undo!().ok && !S.getState().friendRequests.includes(sentReq!));
+check('taking it back also removes their notification', !S.notificationsFor('u-dev').some((n) => n.text.includes('sent you a friend request')));
+
+const incoming = S.incomingRequests(demo)[0];
+const accepted = S.acceptFriendRequest(incoming.id);
+check('accepting a request can be undone', accepted.ok && accepted.undo!().ok && S.friendStatus(incoming.fromId) === 'incoming');
+const declined = S.declineFriendRequest(incoming.id);
+check('declining a request can be undone', declined.ok && declined.undo!().ok && S.friendStatus(incoming.fromId) === 'incoming');
+
+const oldName = me().name, oldTheme = me().settings.theme;
+const renamed = S.updateProfile({ name: 'Renamed' });
+check('a profile save can be undone', renamed.ok && renamed.undo!().ok && me().name === oldName);
+const themed = S.updateSettings({ theme: oldTheme === 'dark' ? 'light' : 'dark' });
+check('a settings save can be undone', themed.ok && themed.undo!().ok && me().settings.theme === oldTheme);
+const signedOut = S.removeFriend('u-maya'); S.logout();
+check('undo does nothing once signed out', signedOut.ok && !signedOut.undo!().ok);
+
+// ---- toasts in the activity history (the duplicate check clears after each task, hence the awaits) ----
+const tick = () => new Promise((r) => setTimeout(r, 0));
+(async () => {
+  S.initState(); S.loginDemo(); await tick();
+  const count = () => S.activityFor(demo).length;
+  let n = count();
+  S.logNote('Profile saved.');
+  check('a toast is added to the history', count() === n + 1 && S.activityFor(demo)[0].text === 'Profile saved.');
+  await tick();
+  n = count();
+  S.acceptInvite(target.id, Date.now(), true);
+  S.logNote('You are in.');
+  check('a toast for an action that already logged itself is not added twice', count() === n + 1 && S.activityFor(demo)[0].text.startsWith('You joined'));
+  await tick();
+  n = count();
+  loginAs('u-maya'); S.acceptInvite(soloId, Date.now(), true); loginAs(demo);   // someone else's action, toasted to you
+  S.logNote('Maya joined your invite');
+  check("someone else's action toasted to you is logged", count() === n + 1);
+  S.logout(); S.logNote('You are logged out.');
+  check('nothing is logged when signed out', count() === n + 1);
+
+  console.log(failed === 0 ? '\nAll rules pass.' : `\n${failed} failing.`);
+  if (failed) throw new Error(`${failed} rule check(s) failed`);   // unhandled rejection: exits non-zero
+})();

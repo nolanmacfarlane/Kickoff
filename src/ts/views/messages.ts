@@ -70,7 +70,7 @@ export function render(args: string[]): HTMLElement {
           const text = input.value;
           drafts.delete(selected.id);                       // clear first: sending re-renders this screen
           const r = sendMessage(selected.id, text);
-          if (!r.ok) { drafts.set(selected.id, text); toast(r.error); }
+          if (!r.ok) { drafts.set(selected.id, text); toast(r.error, { tone: 'error' }); }
         } }, input, h('button', { class: 'btn btn--primary', type: 'submit' }, uiIcon('send', 'icon icon--inline'), 'Send'));
 
     pane = h('section', { class: 'chat-pane card', 'aria-label': `Conversation: ${d.title}` },

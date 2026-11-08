@@ -76,13 +76,44 @@ export function avatar(user: Pick<User, 'name' | 'avatarColor'>, size: 'sm' | 'l
 export function tag(text: string, extra = ''): HTMLElement { return h('span', { class: `tag ${extra}`.trim() }, text); }
 
 // ---------- toast ----------
-export function toast(message: string): void {
+// Time on screen grows with the length of the message, and there is longer to reach Undo. The bar at the bottom shows
+// the time left. It pauses while the pointer or keyboard focus is on the toasts, or the tab is hidden.
+// Every toast is also passed to the logger (main.ts puts it in the activity history).
+type Outcome = { ok: true; undo?: () => Outcome } | { ok: false; error: string };
+export interface ToastOptions { undo?: () => Outcome; tone?: 'error' }
+const MAX_TOASTS = 4;
+const toastMs = (message: string, undo: boolean) => Math.min(12_000, Math.max(undo ? 8_000 : 5_000, 2_500 + message.length * 60));
+let toastLogger: ((message: string) => void) | null = null;
+export function onToast(fn: (message: string) => void): void { toastLogger = fn; }
+
+export function toast(message: string, o: ToastOptions = {}): void {
   const region = document.getElementById('toast-region');
   if (!region) return;
-  const t = h('div', { class: 'toast', role: 'status' }, message);
+  toastLogger?.(message);
+  const dismiss = () => { if (!t.isConnected || t.classList.contains('toast--leaving')) return; t.classList.add('toast--leaving'); setTimeout(() => t.remove(), 160); };
+  const undo = o.undo;
+  const t = h('div', { class: `toast${o.tone === 'error' ? ' toast--error' : ''}`, role: o.tone === 'error' ? 'alert' : 'status' },
+    h('span', { class: 'toast__msg' }, message),
+    undo && h('button', { class: 'toast__undo', type: 'button', onClick: () => {
+      dismiss();
+      const r = undo();
+      if (r.ok) toast(`Undone: ${message}`); else toast(r.error, { tone: 'error' });
+    } }, 'Undo'),
+    h('button', { class: 'toast__close', type: 'button', 'aria-label': 'Dismiss', title: 'Dismiss', onClick: dismiss }, icon('close')),
+    h('span', { class: 'toast__bar', 'aria-hidden': 'true', style: `--toast-ms:${toastMs(message, !!undo)}ms`, onAnimationend: dismiss }));
   region.append(t);
-  setTimeout(() => t.remove(), 3600);
+  const shown = Array.from(region.querySelectorAll('.toast:not(.toast--leaving)'));
+  shown.slice(0, Math.max(0, shown.length - MAX_TOASTS)).forEach((x) => x.remove());
 }
+/** Toast an action's outcome: the error if it failed, otherwise the success message (with Undo when the action can be undone). */
+export function report(r: Outcome, success?: string): void {
+  if (!r.ok) toast(r.error, { tone: 'error' });
+  else if (success) toast(success, { undo: r.undo });
+}
+document.addEventListener('visibilitychange', () => {
+  const region = document.getElementById('toast-region');
+  if (region) region.toggleAttribute('data-paused', document.hidden);
+});
 
 // ---------- icons ----------
 const ICONS = {
